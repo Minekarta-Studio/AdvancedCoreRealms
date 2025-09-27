@@ -2,7 +2,7 @@ package com.minekarta.advancedcorerealms.commands;
 
 import com.minekarta.advancedcorerealms.AdvancedCoreRealms;
 import com.minekarta.advancedcorerealms.data.object.Realm;
-import com.minekarta.advancedcorerealms.manager.WorldManager;
+import com.minekarta.advancedcorerealms.manager.world.WorldManager;
 import com.minekarta.advancedcorerealms.utils.MessageUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;

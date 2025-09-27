@@ -4,6 +4,7 @@ main: com.minekarta.advancedcorerealms.AdvancedCoreRealms
 api-version: '1.21'
 author: [Minekarta]
 description: A comprehensive plugin for player-managed personal worlds.
+softdepend: [Multiverse-Core, MultiWorld]
 commands:
   realms:
     description: Main command for AdvancedCoreRealms.
@@ -63,4 +64,7 @@ permissions:
     default: op
   advancedcorerealms.admin.teleport.others:
     description: Allows teleporting to any realm without an invitation
+    default: op
+  advancedcorerealms.admin.debug:
+    description: Allows use of /realms debug command to test fallback system
     default: op
