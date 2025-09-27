@@ -7,7 +7,7 @@ import com.minekarta.advancedcorerealms.listeners.PlayerConnectionListener;
 import com.minekarta.advancedcorerealms.listeners.PlayerWorldListener;
 import com.minekarta.advancedcorerealms.manager.InviteManager;
 import com.minekarta.advancedcorerealms.manager.LanguageManager;
-import com.minekarta.advancedcorerealms.manager.WorldManager;
+import com.minekarta.advancedcorerealms.manager.world.WorldManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class AdvancedCoreRealms extends JavaPlugin {

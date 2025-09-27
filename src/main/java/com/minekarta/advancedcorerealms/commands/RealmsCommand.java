@@ -83,6 +83,10 @@ public class RealmsCommand implements CommandExecutor, TabCompleter {
             case "transfer":
                 handleTransfer(player, args);
                 break;
+            case "debug":
+            case "test":
+                handleDebug(player);
+                break;
             default:
                 MessageUtils.sendMessage(player, "command.help");
                 break;
@@ -107,7 +111,7 @@ public class RealmsCommand implements CommandExecutor, TabCompleter {
         }
         
         if (args.length < 2) {
-            player.sendMessage(ChatColor.RED + "Usage: /realms create <name>");
+            player.sendMessage(ChatColor.RED + "Usage: /realms create <name> [type]");
             return;
         }
         
@@ -116,8 +120,11 @@ public class RealmsCommand implements CommandExecutor, TabCompleter {
         
         if (args.length >= 3) {
             String type = args[2].toUpperCase();
-            if (type.equals("FLAT") || type.equals("NORMAL")) {
+            if (type.equals("FLAT") || type.equals("NORMAL") || type.equals("AMPLIFIED")) {
                 worldType = type;
+            } else {
+                player.sendMessage(ChatColor.RED + "Invalid world type! Valid types: FLAT, NORMAL, AMPLIFIED");
+                return;
             }
         }
         
@@ -303,11 +310,25 @@ public class RealmsCommand implements CommandExecutor, TabCompleter {
         player.sendMessage(ChatColor.GREEN + "Realm ownership transferred successfully!");
     }
     
+    private void handleDebug(Player player) {
+        if (!player.hasPermission("advancedcorerealms.admin.debug")) {
+            MessageUtils.sendMessage(player, "error.no-permission");
+            return;
+        }
+        
+        // Run the fallback system test
+        com.minekarta.advancedcorerealms.manager.world.FallbackSystemTester tester = 
+            new com.minekarta.advancedcorerealms.manager.world.FallbackSystemTester(plugin);
+        tester.runFallbackTests(player);
+        
+        player.sendMessage(ChatColor.GOLD + "Fallback system test initiated. Check console for results.");
+    }
+    
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
             List<String> subcommands = Arrays.asList("help", "create", "delete", "tp", "teleport", "list", 
-                    "invite", "accept", "deny", "reload", "transfer");
+                    "invite", "accept", "deny", "reload", "transfer", "debug", "test");
             return filterByPrefix(subcommands, args[0]);
         } else if (args.length == 2) {
             String subcommand = args[0].toLowerCase();
@@ -330,14 +351,14 @@ public class RealmsCommand implements CommandExecutor, TabCompleter {
                     }
                     return filterByPrefix(worlds, args[1]);
                 case "create":
-                    return Arrays.asList("FLAT", "NORMAL"); // Only suggest world types for create command
+                    return Arrays.asList("FLAT", "NORMAL", "AMPLIFIED"); // Updated to include more world types
                 default:
                     return new ArrayList<>();
             }
         } else if (args.length == 3) {
             String subcommand = args[0].toLowerCase();
             if (subcommand.equals("create")) {
-                return Arrays.asList("FLAT", "NORMAL");
+                return Arrays.asList("FLAT", "NORMAL", "AMPLIFIED");
             } else if (subcommand.equals("invite") || subcommand.equals("transfer")) {
                 // Return online player names
                 return Bukkit.getOnlinePlayers().stream()

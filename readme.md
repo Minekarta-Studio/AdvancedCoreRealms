@@ -61,7 +61,7 @@ AdvancedCoreRealms is a comprehensive PaperMC plugin designed to provide players
 - Appropriate server permissions for world creation/deletion
 
 ### Installation Steps
-1. Download the `advancedrealmcore-1.0.0-ALPHA.jar` file
+1. Download the `AdvancedCoreRealms-1.0.0-ALPHA.jar` file
 2. Place the JAR file in your server's `plugins` directory
 3. Restart your PaperMC server
 4. The plugin will automatically generate configuration files in the `plugins/AdvancedCoreRealms/` directory

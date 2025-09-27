@@ -1,5 +1,7 @@
 package com.minekarta.advancedcorerealms.data.object;
 
+import org.bukkit.World;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -8,15 +10,25 @@ public class Realm {
     private String name;
     private UUID owner;
     private List<UUID> members;
+    private List<UUID> accessList;  // Additional access permissions beyond members
     private boolean isFlat;
     private long creationTime;
+    private int maxPlayers;        // Max players allowed in the world
+    private boolean isCreativeMode; // Whether the world is in creative or survival
+    private boolean isPeacefulMode; // Whether the world is in peaceful mode
+    private String worldType;      // The type of world (NORMAL, FLAT, AMPLIFIED, etc.)
     
     public Realm(String name, UUID owner, boolean isFlat) {
         this.name = name;
         this.owner = owner;
         this.members = new ArrayList<>();
+        this.accessList = new ArrayList<>();
         this.isFlat = isFlat;
         this.creationTime = System.currentTimeMillis();
+        this.maxPlayers = 8; // Default max players
+        this.isCreativeMode = false; // Default to survival
+        this.isPeacefulMode = false; // Default to normal mob spawning
+        this.worldType = isFlat ? "FLAT" : "NORMAL";
     }
     
     // Getters and setters
@@ -44,6 +56,14 @@ public class Realm {
         this.members = members;
     }
     
+    public List<UUID> getAccessList() {
+        return accessList;
+    }
+    
+    public void setAccessList(List<UUID> accessList) {
+        this.accessList = accessList;
+    }
+    
     public boolean isFlat() {
         return isFlat;
     }
@@ -56,7 +76,74 @@ public class Realm {
         return creationTime;
     }
     
+    public int getMaxPlayers() {
+        return maxPlayers;
+    }
+    
+    public void setMaxPlayers(int maxPlayers) {
+        this.maxPlayers = maxPlayers;
+    }
+    
+    public boolean isCreativeMode() {
+        return isCreativeMode;
+    }
+    
+    public void setCreativeMode(boolean creativeMode) {
+        isCreativeMode = creativeMode;
+    }
+    
+    public boolean isPeacefulMode() {
+        return isPeacefulMode;
+    }
+    
+    public void setPeacefulMode(boolean peacefulMode) {
+        isPeacefulMode = peacefulMode;
+    }
+    
+    public String getWorldType() {
+        return worldType;
+    }
+    
+    public void setWorldType(String worldType) {
+        this.worldType = worldType;
+    }
+    
     public boolean isMember(UUID playerId) {
         return members.contains(playerId) || owner.equals(playerId);
+    }
+    
+    public boolean hasAccess(UUID playerId) {
+        // Owner, members, and those in access list can access
+        return owner.equals(playerId) || members.contains(playerId) || accessList.contains(playerId);
+    }
+    
+    public void addMember(UUID playerId) {
+        if (!members.contains(playerId)) {
+            members.add(playerId);
+        }
+    }
+    
+    public void removeMember(UUID playerId) {
+        members.remove(playerId);
+        // Also remove from access list if there
+        accessList.remove(playerId);
+    }
+    
+    public void addToAccessList(UUID playerId) {
+        if (!accessList.contains(playerId) && !owner.equals(playerId) && !members.contains(playerId)) {
+            accessList.add(playerId);
+        }
+    }
+    
+    public void removeFromAccessList(UUID playerId) {
+        accessList.remove(playerId);
+    }
+    
+    /**
+     * Gets the actual Bukkit world object if loaded
+     * @return The loaded World object or null if not currently loaded
+     */
+    public World getBukkitWorld() {
+        return org.bukkit.Bukkit.getWorld(name);
     }
 }
