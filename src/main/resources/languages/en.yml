@@ -1,0 +1,12 @@
+prefix: "&8[&bRealms&8] &r"
+command:
+  help: "&aShowing help for AdvancedCoreRealms..."
+  reloaded: "&aConfiguration reloaded successfully."
+world:
+  created: "&aSuccessfully created your new realm named &e%world%&a."
+  deleted: "&cSuccessfully deleted your realm &e%world%&c."
+  teleport: "&7Teleporting you to &e%world%&7..."
+error:
+  no-permission: "&cYou do not have permission to use this command."
+  world-exists: "&cA realm with that name already exists."
+  not-owner: "&cYou are not the owner of this realm."

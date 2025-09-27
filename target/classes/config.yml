@@ -1,0 +1,13 @@
+# Language Settings
+# Available languages: en (English), es (Spanish), id (Indonesian)
+language: "en"
+
+# World Settings
+max-realms-per-player: 3 # The maximum number of realms a player can own (requires separate permissions for more)
+default-world-type: "FLAT" # Default world type on creation: FLAT or NORMAL
+
+# Inventory Settings
+separate-inventories: true # Enable/disable separate inventories for realms
+
+# Limits
+invite-timeout-seconds: 60 # Time in seconds before an invitation expires

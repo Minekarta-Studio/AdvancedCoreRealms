@@ -1,0 +1,12 @@
+prefix: "&8[&bReinos&8] &r"
+command:
+  help: "&aMostrando ayuda para AdvancedCoreRealms..."
+  reloaded: "&aConfiguración recargada exitosamente."
+world:
+  created: "&aSe creó exitosamente tu nuevo reino llamado &e%world%&a."
+  deleted: "&cSe eliminó exitosamente tu reino &e%world%&c."
+  teleport: "&7Teletransportándote a &e%world%&7..."
+error:
+  no-permission: "&cNo tienes permiso para usar este comando."
+  world-exists: "&cYa existe un reino con ese nombre."
+  not-owner: "&cNo eres el propietario de este reino."

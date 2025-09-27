@@ -1,0 +1,12 @@
+prefix: "&8[&bRealms&8] &r"
+command:
+  help: "&aMenampilkan bantuan untuk AdvancedCoreRealms..."
+  reloaded: "&aKonfigurasi berhasil dimuat ulang."
+world:
+  created: "&aBerhasil membuat realm baru bernama &e%world%&a."
+  deleted: "&cBerhasil menghapus realm &e%world%&c."
+  teleport: "&7Teleportasi ke &e%world%&7..."
+error:
+  no-permission: "&cAnda tidak memiliki izin untuk menggunakan perintah ini."
+  world-exists: "&cRealm dengan nama tersebut sudah ada."
+  not-owner: "&cAnda bukan pemilik dari realm ini."

@@ -1,0 +1,66 @@
+name: AdvancedCoreRealms
+version: 1.0.0
+main: com.minekarta.advancedcorerealms.AdvancedCoreRealms
+api-version: '1.21'
+author: [Minekarta]
+description: A comprehensive plugin for player-managed personal worlds.
+commands:
+  realms:
+    description: Main command for AdvancedCoreRealms.
+    usage: /realms <subcommand>
+    aliases: [realm]
+permissions:
+  advancedcorerealms.user.base:
+    description: Grants access to open the main GUI with /realms
+    default: true
+  advancedcorerealms.user.help:
+    description: Allows the user to view the help command
+    default: true
+  advancedcorerealms.user.create:
+    description: Allows the user to create new realms
+    default: op
+  advancedcorerealms.user.delete:
+    description: Allows the user to delete their own realms
+    default: op
+  advancedcorerealms.user.teleport:
+    description: Allows the user to teleport to their realms
+    default: true
+  advancedcorerealms.user.back:
+    description: Allows the user to return to their previous location
+    default: true
+  advancedcorerealms.user.list:
+    description: Allows the user to list their accessible realms
+    default: true
+  advancedcorerealms.user.invite:
+    description: Allows the user to invite others to their realms
+    default: op
+  advancedcorerealms.user.accept:
+    description: Allows the user to accept a realm invitation
+    default: true
+  advancedcorerealms.user.deny:
+    description: Allows the user to deny a realm invitation
+    default: true
+  advancedcorerealms.limit.realms.1:
+    description: Allows owning 1 realm
+    default: true
+  advancedcorerealms.limit.realms.3:
+    description: Allows owning 3 realms
+    default: false
+  advancedcorerealms.limit.realms.5:
+    description: Allows owning 5 realms
+    default: false
+  advancedcorerealms.admin.*:
+    description: Grants all administrative permissions
+    default: op
+  advancedcorerealms.admin.reload:
+    description: Allows use of /realms reload
+    default: op
+  advancedcorerealms.admin.transfer:
+    description: Allows transferring ownership of a realm
+    default: op
+  advancedcorerealms.admin.vanilla:
+    description: Grants access to all /realms vanilla subcommands
+    default: op
+  advancedcorerealms.admin.teleport.others:
+    description: Allows teleporting to any realm without an invitation
+    default: op
