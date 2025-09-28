@@ -74,7 +74,7 @@ public class InventoryListener implements Listener {
             // If player is trying to leave the realm with a non-transferable item
             if (!isSameRealmWorld(player.getWorld().getName(), currentWorldName)) {
                 event.setCancelled(true);
-                player.sendMessage("You cannot drop this item outside of the realm!");
+                plugin.getLanguageManager().sendMessage(player, "error.item_not_transferable");
             }
         }
     }
@@ -109,7 +109,7 @@ public class InventoryListener implements Listener {
                 ItemStack currentItem = event.getOldCursor();
                 if (currentItem != null && !currentRealm.isItemTransferable(currentItem.getType().name())) {
                     event.setCancelled(true);
-                    player.sendMessage("You cannot take this item outside of the realm!");
+                    plugin.getLanguageManager().sendMessage(player, "error.item_not_transferable");
                     return;
                 }
             }

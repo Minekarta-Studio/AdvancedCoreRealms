@@ -60,16 +60,16 @@ public class MenuManager {
         new RealmsListMenu(plugin, player, realmsListConfig, this, ownRealms, 1).open();
     }
 
-    public void openRealmManagementMenu(Player player, String realmName) {
-        new RealmManagementMenu(plugin, player, realmManagementConfig, this, realmName).open();
+    public void openRealmManagementMenu(Player player, String realmName, boolean fromMyRealms) {
+        new RealmManagementMenu(plugin, player, realmManagementConfig, this, realmName, fromMyRealms).open();
     }
 
-    public void openRealmSettingsMenu(Player player, String realmName) {
-        new RealmSettingsMenu(plugin, player, realmSettingsConfig, this, realmName).open();
+    public void openRealmSettingsMenu(Player player, String realmName, boolean fromMyRealms) {
+        new RealmSettingsMenu(plugin, player, realmSettingsConfig, this, realmName, fromMyRealms).open();
     }
 
-    public void openRealmPlayersMenu(Player player, String realmName, int page) {
-        new RealmPlayersMenu(plugin, player, realmPlayersConfig, this, realmName, page).open();
+    public void openRealmPlayersMenu(Player player, String realmName, int page, boolean fromMyRealms) {
+        new RealmPlayersMenu(plugin, player, realmPlayersConfig, this, realmName, page, fromMyRealms).open();
     }
 
     public void openRealmCreationMenu(Player player) {

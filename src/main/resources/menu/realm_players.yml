@@ -7,28 +7,35 @@ realm_players:
   title: "{#6677ee>99ffcc}Realms | Players: [name]{/#}"
   size: 54
   elements:
-    info_item:
-      slot: 4
-      material: "WRITTEN_BOOK"
-      name: "{#6677ee>99ffcc}Player Management{/#}"
-      lore:
-        - "{#6677ee>99ffcc}Manage players for realm: [name]{/#}"
-    
     back_button:
       slot: 45
-      material: "BARRIER"
-      name: "{#ff5555>ff9999}Back{/#}"
+      material: "ARROW"
+      name: "<gray>Back"
       lore:
-        - "{#ff5555>ff9999}Return to Realm Management{/#}"
-    
+        - "<gray>Return to Realm Management"
+
+    previous_page:
+      slot: 48
+      material: "ARROW"
+      name: "<yellow>Previous Page"
+      lore:
+        - "<gray>Go to the previous page"
+
     invite_player:
       slot: 49
       material: "WRITABLE_BOOK"
-      name: "{#6677ee>99ffcc}Invite Player{/#}"
+      name: "<green>Invite Player"
       lore:
-        - "{#6677ee>99ffcc}Invite a player to this Realm{/#}"
-    
+        - "<gray>Invite a player to this Realm"
+
+    next_page:
+      slot: 50
+      material: "ARROW"
+      name: "<yellow>Next Page"
+      lore:
+        - "<gray>Go to the next page"
+
     glass_panes:
-      material: "BLACK_STAINED_GLASS_PANE"
+      material: "GRAY_STAINED_GLASS_PANE"
       name: " "
       fill_remaining: true

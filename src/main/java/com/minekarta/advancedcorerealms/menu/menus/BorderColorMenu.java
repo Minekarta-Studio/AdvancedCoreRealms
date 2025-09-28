@@ -6,7 +6,6 @@ import com.minekarta.advancedcorerealms.menu.Menu;
 import com.minekarta.advancedcorerealms.menu.MenuManager;
 import com.minekarta.advancedcorerealms.worldborder.BorderColor;
 import com.minekarta.advancedcorerealms.worldborder.PlayerChangeBorderColorEvent;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
@@ -15,11 +14,14 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class BorderColorMenu extends Menu {
 
     private final MenuManager menuManager;
+    private final Map<Integer, String> slotActions = new HashMap<>();
 
     public BorderColorMenu(AdvancedCoreRealms plugin, Player player, FileConfiguration menuConfig, MenuManager menuManager) {
         super(plugin, player, menuConfig.getString("border_color.title", "Border Color"), menuConfig.getInt("border_color.size", 27));
@@ -52,24 +54,31 @@ public class BorderColorMenu extends Menu {
             List<String> lore = itemConfig.getStringList("lore");
 
             inventory.setItem(slot, createGuiItem(material, name, lore.toArray(new String[0])));
+            slotActions.put(slot, key);
         }
     }
 
     @Override
     public void handleMenu(InventoryClickEvent e) {
         ItemStack clickedItem = e.getCurrentItem();
-        if (clickedItem == null || clickedItem.getType().isAir() || clickedItem.getItemMeta() == null) return;
+        if (clickedItem == null || clickedItem.getType().isAir()) return;
 
-        String displayName = PlainTextComponentSerializer.plainText().serialize(clickedItem.getItemMeta().displayName());
+        String action = slotActions.get(e.getSlot());
+        if (action == null) return;
 
-        if (displayName.contains("Blue")) {
-            setBorderColor(BorderColor.BLUE);
-        } else if (displayName.contains("Green")) {
-            setBorderColor(BorderColor.GREEN);
-        } else if (displayName.contains("Red")) {
-            setBorderColor(BorderColor.RED);
-        } else if (displayName.equalsIgnoreCase("Back")) {
-            menuManager.openMainMenu(player);
+        switch (action) {
+            case "blue_color":
+                setBorderColor(BorderColor.BLUE);
+                break;
+            case "green_color":
+                setBorderColor(BorderColor.GREEN);
+                break;
+            case "red_color":
+                setBorderColor(BorderColor.RED);
+                break;
+            case "back":
+                menuManager.openMainMenu(player);
+                break;
         }
     }
 
@@ -80,7 +89,7 @@ public class BorderColorMenu extends Menu {
 
         if (!colorEvent.isCancelled()) {
             advancedCorePlayer.setBorderColor(color);
-            player.sendMessage(miniMessage.deserialize("<green>Border color set to " + color.name().toLowerCase() + "!</green>"));
+            plugin.getLanguageManager().sendMessage(player, "border.color_set", "%color%", color.name().toLowerCase());
             player.closeInventory();
         }
     }
