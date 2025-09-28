@@ -41,6 +41,18 @@ permissions:
   advancedcorerealms.user.deny:
     description: Allows the user to deny a realm invitation
     default: true
+  advancedcorerealms.user.border:
+    description: Allows the user to use world border features
+    default: true
+  advancedcorerealms.user.border.toggle:
+    description: Allows the user to toggle world border
+    default: true
+  advancedcorerealms.user.border.color:
+    description: Allows the user to change world border color
+    default: true
+  advancedcorerealms.user.upgrade:
+    description: Allows the user to use realm upgrade features
+    default: true
   advancedcorerealms.limit.realms.1:
     description: Allows owning 1 realm
     default: true

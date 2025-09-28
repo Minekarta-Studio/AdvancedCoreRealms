@@ -1,6 +1,7 @@
 package com.minekarta.advancedcorerealms.data;
 
 import com.minekarta.advancedcorerealms.AdvancedCoreRealms;
+import com.minekarta.advancedcorerealms.worldborder.BorderColor;
 import org.bukkit.Location;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -188,6 +189,71 @@ public class PlayerDataManager {
         org.bukkit.entity.Player player = org.bukkit.Bukkit.getPlayer(playerUUID);
         if (player != null) {
             player.getInventory().setContents(inventory);
+        }
+    }
+    
+    /**
+     * Get whether player has world border enabled
+     */
+    public boolean hasWorldBorderEnabled(UUID playerUUID) {
+        File playerFile = getPlayerDataFile(playerUUID);
+        if (!playerFile.exists()) {
+            // Return default value if no data exists
+            return plugin.getConfig().getBoolean("default-world-border", true);
+        }
+        
+        FileConfiguration config = YamlConfiguration.loadConfiguration(playerFile);
+        return config.getBoolean("world_border.enabled", 
+            plugin.getConfig().getBoolean("default-world-border", true));
+    }
+    
+    /**
+     * Set whether player has world border enabled
+     */
+    public void setWorldBorderEnabled(UUID playerUUID, boolean enabled) {
+        File playerFile = getPlayerDataFile(playerUUID);
+        FileConfiguration config = YamlConfiguration.loadConfiguration(playerFile);
+        
+        config.set("world_border.enabled", enabled);
+        
+        try {
+            config.save(playerFile);
+        } catch (IOException e) {
+            plugin.getLogger().severe("Could not save player world border data: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Get player's border color
+     */
+    public BorderColor getBorderColor(UUID playerUUID) {
+        File playerFile = getPlayerDataFile(playerUUID);
+        if (!playerFile.exists()) {
+            // Return default value if no data exists
+            String defaultColor = plugin.getConfig().getString("default-border-color", "BLUE");
+            return BorderColor.fromString(defaultColor);
+        }
+        
+        FileConfiguration config = YamlConfiguration.loadConfiguration(playerFile);
+        String colorString = config.getString("world_border.color", 
+            plugin.getConfig().getString("default-border-color", "BLUE"));
+        
+        return BorderColor.fromString(colorString);
+    }
+    
+    /**
+     * Set player's border color
+     */
+    public void setBorderColor(UUID playerUUID, BorderColor color) {
+        File playerFile = getPlayerDataFile(playerUUID);
+        FileConfiguration config = YamlConfiguration.loadConfiguration(playerFile);
+        
+        config.set("world_border.color", color.name());
+        
+        try {
+            config.save(playerFile);
+        } catch (IOException e) {
+            plugin.getLogger().severe("Could not save player border color data: " + e.getMessage());
         }
     }
 }

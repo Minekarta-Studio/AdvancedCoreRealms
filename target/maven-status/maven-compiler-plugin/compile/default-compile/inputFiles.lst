@@ -1,4 +1,6 @@
 E:\PT MINEKARTA SERVER INDONESIA\Plugin Development\AdvancedCoreRealms\src\main\java\com\minekarta\advancedcorerealms\AdvancedCoreRealms.java
+E:\PT MINEKARTA SERVER INDONESIA\Plugin Development\AdvancedCoreRealms\src\main\java\com\minekarta\advancedcorerealms\api\AdvancedCorePlayer.java
+E:\PT MINEKARTA SERVER INDONESIA\Plugin Development\AdvancedCoreRealms\src\main\java\com\minekarta\advancedcorerealms\api\AdvancedCorePlayerImpl.java
 E:\PT MINEKARTA SERVER INDONESIA\Plugin Development\AdvancedCoreRealms\src\main\java\com\minekarta\advancedcorerealms\commands\RealmsCommand.java
 E:\PT MINEKARTA SERVER INDONESIA\Plugin Development\AdvancedCoreRealms\src\main\java\com\minekarta\advancedcorerealms\data\object\Realm.java
 E:\PT MINEKARTA SERVER INDONESIA\Plugin Development\AdvancedCoreRealms\src\main\java\com\minekarta\advancedcorerealms\data\PlayerDataManager.java
@@ -18,6 +20,20 @@ E:\PT MINEKARTA SERVER INDONESIA\Plugin Development\AdvancedCoreRealms\src\main\
 E:\PT MINEKARTA SERVER INDONESIA\Plugin Development\AdvancedCoreRealms\src\main\java\com\minekarta\advancedcorerealms\manager\world\WorldManager.java
 E:\PT MINEKARTA SERVER INDONESIA\Plugin Development\AdvancedCoreRealms\src\main\java\com\minekarta\advancedcorerealms\manager\world\WorldPluginHook.java
 E:\PT MINEKARTA SERVER INDONESIA\Plugin Development\AdvancedCoreRealms\src\main\java\com\minekarta\advancedcorerealms\manager\world\WorldPluginManager.java
+E:\PT MINEKARTA SERVER INDONESIA\Plugin Development\AdvancedCoreRealms\src\main\java\com\minekarta\advancedcorerealms\nms\BukkitWorldBorderWrapper.java
+E:\PT MINEKARTA SERVER INDONESIA\Plugin Development\AdvancedCoreRealms\src\main\java\com\minekarta\advancedcorerealms\nms\NMSWorldBorder.java
 E:\PT MINEKARTA SERVER INDONESIA\Plugin Development\AdvancedCoreRealms\src\main\java\com\minekarta\advancedcorerealms\placeholder\AdvancedCoreRealmsPlaceholder.java
+E:\PT MINEKARTA SERVER INDONESIA\Plugin Development\AdvancedCoreRealms\src\main\java\com\minekarta\advancedcorerealms\upgrades\BaseRealmUpgrade.java
+E:\PT MINEKARTA SERVER INDONESIA\Plugin Development\AdvancedCoreRealms\src\main\java\com\minekarta\advancedcorerealms\upgrades\events\RealmsUpgradeEvent.java
+E:\PT MINEKARTA SERVER INDONESIA\Plugin Development\AdvancedCoreRealms\src\main\java\com\minekarta\advancedcorerealms\upgrades\events\RealmsUpgradePreCheckEvent.java
+E:\PT MINEKARTA SERVER INDONESIA\Plugin Development\AdvancedCoreRealms\src\main\java\com\minekarta\advancedcorerealms\upgrades\RealmDifficultyUpgrade.java
+E:\PT MINEKARTA SERVER INDONESIA\Plugin Development\AdvancedCoreRealms\src\main\java\com\minekarta\advancedcorerealms\upgrades\RealmMembersUpgrade.java
+E:\PT MINEKARTA SERVER INDONESIA\Plugin Development\AdvancedCoreRealms\src\main\java\com\minekarta\advancedcorerealms\upgrades\RealmSizeUpgrade.java
+E:\PT MINEKARTA SERVER INDONESIA\Plugin Development\AdvancedCoreRealms\src\main\java\com\minekarta\advancedcorerealms\upgrades\RealmUpgrade.java
+E:\PT MINEKARTA SERVER INDONESIA\Plugin Development\AdvancedCoreRealms\src\main\java\com\minekarta\advancedcorerealms\upgrades\RealmWarpUpgrade.java
+E:\PT MINEKARTA SERVER INDONESIA\Plugin Development\AdvancedCoreRealms\src\main\java\com\minekarta\advancedcorerealms\upgrades\UpgradeManager.java
 E:\PT MINEKARTA SERVER INDONESIA\Plugin Development\AdvancedCoreRealms\src\main\java\com\minekarta\advancedcorerealms\utils\ColorUtils.java
 E:\PT MINEKARTA SERVER INDONESIA\Plugin Development\AdvancedCoreRealms\src\main\java\com\minekarta\advancedcorerealms\utils\MessageUtils.java
+E:\PT MINEKARTA SERVER INDONESIA\Plugin Development\AdvancedCoreRealms\src\main\java\com\minekarta\advancedcorerealms\worldborder\BorderColor.java
+E:\PT MINEKARTA SERVER INDONESIA\Plugin Development\AdvancedCoreRealms\src\main\java\com\minekarta\advancedcorerealms\worldborder\PlayerChangeBorderColorEvent.java
+E:\PT MINEKARTA SERVER INDONESIA\Plugin Development\AdvancedCoreRealms\src\main\java\com\minekarta\advancedcorerealms\worldborder\PlayerToggleBorderEvent.java

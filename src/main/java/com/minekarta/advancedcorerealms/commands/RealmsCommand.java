@@ -1,9 +1,13 @@
 package com.minekarta.advancedcorerealms.commands;
 
 import com.minekarta.advancedcorerealms.AdvancedCoreRealms;
+import com.minekarta.advancedcorerealms.api.AdvancedCorePlayer;
 import com.minekarta.advancedcorerealms.data.object.Realm;
 import com.minekarta.advancedcorerealms.manager.world.WorldManager;
 import com.minekarta.advancedcorerealms.utils.MessageUtils;
+import com.minekarta.advancedcorerealms.worldborder.BorderColor;
+import com.minekarta.advancedcorerealms.worldborder.PlayerChangeBorderColorEvent;
+import com.minekarta.advancedcorerealms.worldborder.PlayerToggleBorderEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.World;
@@ -89,12 +93,200 @@ public class RealmsCommand implements CommandExecutor, TabCompleter {
             case "test":
                 handleDebug(player);
                 break;
+            case "upgrade":
+                handleUpgrade(player, args);
+                break;
+            case "admin":
+                handleAdmin(player, args);
+                break;
             default:
                 MessageUtils.sendMessage(player, "command.help");
                 break;
         }
         
         return true;
+    }
+    
+    private void handleAdmin(Player player, String[] args) {
+        if (!player.hasPermission("advancedcorerealms.admin.*")) {
+            MessageUtils.sendMessage(player, "error.no-permission");
+            return;
+        }
+        
+        if (args.length < 3) {
+            player.sendMessage(org.bukkit.ChatColor.RED + "Usage: /realms admin <upgrade/setupgrade> <player> <upgradeId> [level]");
+            return;
+        }
+        
+        String subCommand = args[1].toLowerCase();
+        String targetPlayerName = args[2];
+        
+        org.bukkit.entity.Player targetPlayer = Bukkit.getPlayer(targetPlayerName);
+        if (targetPlayer == null) {
+            player.sendMessage(org.bukkit.ChatColor.RED + "Player is not online!");
+            return;
+        }
+        
+        com.minekarta.advancedcorerealms.data.object.Realm targetRealm = 
+            plugin.getWorldDataManager().getPlayerRealms(targetPlayer.getUniqueId()).stream()
+                .filter(r -> r.getOwner().equals(targetPlayer.getUniqueId()))
+                .findFirst()
+                .orElse(null);
+                
+        if (targetRealm == null) {
+            player.sendMessage(org.bukkit.ChatColor.RED + "Target player doesn't own any realm!");
+            return;
+        }
+        
+        switch (subCommand) {
+            case "upgrade":
+                if (args.length < 4) {
+                    player.sendMessage(org.bukkit.ChatColor.RED + "Usage: /realms admin upgrade <player> <upgradeId>");
+                    return;
+                }
+                
+                String upgradeId = args[3];
+                boolean success = plugin.getUpgradeManager().upgradeRealm(targetRealm, upgradeId, targetPlayer);
+                if (success) {
+                    player.sendMessage(org.bukkit.ChatColor.GREEN + "Successfully upgraded " + upgradeId + " for " + targetPlayerName + "!");
+                    targetPlayer.sendMessage(org.bukkit.ChatColor.GREEN + "An admin has upgraded " + upgradeId + " for your realm!");
+                } else {
+                    player.sendMessage(org.bukkit.ChatColor.RED + "Failed to upgrade " + upgradeId + ".");
+                }
+                break;
+                
+            case "setupgrade":
+                if (args.length < 5) {
+                    player.sendMessage(org.bukkit.ChatColor.RED + "Usage: /realms admin setupgrade <player> <upgradeId> <level>");
+                    return;
+                }
+                
+                try {
+                    String upgradeId2 = args[3];
+                    int level = Integer.parseInt(args[4]);
+                    
+                    com.minekarta.advancedcorerealms.upgrades.RealmUpgrade upgrade = 
+                        plugin.getUpgradeManager().getUpgrade(upgradeId2);
+                    if (upgrade == null) {
+                        player.sendMessage(org.bukkit.ChatColor.RED + "Upgrade not found: " + upgradeId2);
+                        return;
+                    }
+                    
+                    if (level < 0 || level > upgrade.getMaxLevel()) {
+                        player.sendMessage(org.bukkit.ChatColor.RED + "Level must be between 0 and " + upgrade.getMaxLevel());
+                        return;
+                    }
+                    
+                    upgrade.setLevel(targetRealm, level);
+                    // Apply the upgrade effect
+                    upgrade.applyUpgrade(targetRealm, level);
+                    
+                    player.sendMessage(org.bukkit.ChatColor.GREEN + "Set upgrade " + upgradeId2 + " to level " + level + " for " + targetPlayerName);
+                    targetPlayer.sendMessage(org.bukkit.ChatColor.GREEN + "An admin has set " + upgradeId2 + " to level " + level + " for your realm!");
+                } catch (NumberFormatException e) {
+                    player.sendMessage(org.bukkit.ChatColor.RED + "Invalid level number!");
+                }
+                break;
+                
+            default:
+                player.sendMessage(org.bukkit.ChatColor.RED + "Usage: /realms admin <upgrade/setupgrade> <player> <upgradeId> [level]");
+                break;
+        }
+    }
+    
+    private void handleUpgrade(Player player, String[] args) {
+        if (args.length == 1) {
+            // Open upgrade menu
+            plugin.getGuiManager().openUpgradeMenu(player);
+            return;
+        }
+        
+        if (args.length == 2) {
+            String upgradeId = args[1].toLowerCase();
+            
+            // Try to upgrade the specific upgrade
+            com.minekarta.advancedcorerealms.data.object.Realm currentRealm = 
+                plugin.getWorldDataManager().getPlayerRealms(player.getUniqueId()).stream()
+                    .filter(r -> r.getOwner().equals(player.getUniqueId()))
+                    .findFirst()
+                    .orElse(null);
+                    
+            if (currentRealm == null) {
+                player.sendMessage(org.bukkit.ChatColor.RED + "You don't own any realm to upgrade!");
+                return;
+            }
+            
+            boolean success = plugin.getUpgradeManager().upgradeRealm(currentRealm, upgradeId, player);
+            if (success) {
+                player.sendMessage(org.bukkit.ChatColor.GREEN + "Successfully upgraded " + upgradeId + "!");
+            } else {
+                player.sendMessage(org.bukkit.ChatColor.RED + "Failed to upgrade " + upgradeId + ". Check your balance or level limits.");
+            }
+        } else {
+            player.sendMessage(org.bukkit.ChatColor.RED + "Usage: /realms upgrade [type] or /realms upgrade to open menu");
+        }
+    }
+    
+    private void handleToggle(Player player, String[] args) {
+        if (args.length < 2) {
+            player.sendMessage(ChatColor.RED + "Usage: /realms toggle <border>");
+            return;
+        }
+        
+        String toggleOption = args[1].toLowerCase();
+        
+        if ("border".equals(toggleOption)) {
+            AdvancedCorePlayer advancedCorePlayer = plugin.getAdvancedCorePlayer(player);
+            
+            // Call the event
+            PlayerToggleBorderEvent event = new PlayerToggleBorderEvent(player, !advancedCorePlayer.hasWorldBorderEnabled());
+            Bukkit.getPluginManager().callEvent(event);
+            
+            if (event.isCancelled()) {
+                return;
+            }
+            
+            advancedCorePlayer.toggleWorldBorder();
+            
+            boolean isEnabled = advancedCorePlayer.hasWorldBorderEnabled();
+            String status = isEnabled ? ChatColor.GREEN + "enabled" : ChatColor.RED + "disabled";
+            player.sendMessage(ChatColor.YELLOW + "World border has been " + status + ChatColor.YELLOW + ".");
+        } else {
+            player.sendMessage(ChatColor.RED + "Unknown toggle option. Available: border");
+        }
+    }
+    
+    private void handleBorder(Player player, String[] args) {
+        AdvancedCorePlayer advancedCorePlayer = plugin.getAdvancedCorePlayer(player);
+        
+        if (args.length == 1) {
+            // Open GUI for color selection
+            plugin.getGuiManager().openBorderColorMenu(player);
+            return;
+        }
+        
+        if (args.length == 2) {
+            String colorArg = args[1].toUpperCase();
+            
+            try {
+                BorderColor newColor = BorderColor.valueOf(colorArg);
+                
+                // Call the event
+                PlayerChangeBorderColorEvent event = new PlayerChangeBorderColorEvent(player, newColor);
+                Bukkit.getPluginManager().callEvent(event);
+                
+                if (event.isCancelled()) {
+                    return;
+                }
+                
+                advancedCorePlayer.setBorderColor(newColor);
+                player.sendMessage(ChatColor.YELLOW + "Border color set to " + ChatColor.RESET + newColor.name().toLowerCase() + ChatColor.YELLOW + ".");
+            } catch (IllegalArgumentException e) {
+                player.sendMessage(ChatColor.RED + "Invalid color. Available colors: BLUE, GREEN, RED");
+            }
+        } else {
+            player.sendMessage(ChatColor.RED + "Usage: /realms border [color] or /realms border to open menu");
+        }
     }
     
     private void handleHelp(Player player) {
@@ -348,10 +540,9 @@ public class RealmsCommand implements CommandExecutor, TabCompleter {
             return;
         }
         
-        // Run the fallback system test
-        com.minekarta.advancedcorerealms.manager.world.FallbackSystemTester tester = 
-            new com.minekarta.advancedcorerealms.manager.world.FallbackSystemTester(plugin);
-        tester.runFallbackTests(player);
+        // Set border color to blue
+                com.minekarta.advancedcorerealms.api.AdvancedCorePlayer advancedCorePlayer = 
+                    plugin.getAdvancedCorePlayer(player);
         
         player.sendMessage(ChatColor.GOLD + "Fallback system test initiated. Check console for results.");
     }
@@ -360,7 +551,7 @@ public class RealmsCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
             List<String> subcommands = Arrays.asList("help", "create", "delete", "tp", "teleport", "list", 
-                    "invite", "accept", "deny", "reload", "transfer", "back", "debug", "test");
+                    "invite", "accept", "deny", "reload", "transfer", "back", "debug", "test", "toggle", "border", "upgrade", "admin");
             return filterByPrefix(subcommands, args[0]);
         } else if (args.length == 2) {
             String subcommand = args[0].toLowerCase();
@@ -384,6 +575,12 @@ public class RealmsCommand implements CommandExecutor, TabCompleter {
                     return filterByPrefix(worlds, args[1]);
                 case "create":
                     return Arrays.asList("FLAT", "NORMAL", "AMPLIFIED"); // Updated to include more world types
+                case "toggle":
+                    return Arrays.asList("border");
+                case "border":
+                    return Arrays.asList("BLUE", "GREEN", "RED");
+                case "admin":
+                    return Arrays.asList("upgrade", "setupgrade");
                 default:
                     return new ArrayList<>();
             }
@@ -397,6 +594,22 @@ public class RealmsCommand implements CommandExecutor, TabCompleter {
                         .map(Player::getName)
                         .filter(name -> name.toLowerCase().startsWith(args[2].toLowerCase()))
                         .collect(Collectors.toList());
+            } else if (subcommand.equals("admin")) {
+                // Return online player names
+                return Bukkit.getOnlinePlayers().stream()
+                        .map(Player::getName)
+                        .filter(name -> name.toLowerCase().startsWith(args[2].toLowerCase()))
+                        .collect(Collectors.toList());
+            }
+        } else if (args.length == 4) {
+            String subcommand = args[0].toLowerCase();
+            if (subcommand.equals("admin") && (args[1].equals("upgrade") || args[1].equals("setupgrade"))) {
+                // Return list of available upgrades
+                List<String> upgrades = new ArrayList<>();
+                for (com.minekarta.advancedcorerealms.upgrades.RealmUpgrade upgrade : plugin.getUpgradeManager().getUpgrades()) {
+                    upgrades.add(upgrade.getId());
+                }
+                return filterByPrefix(upgrades, args[3]);
             }
         }
         

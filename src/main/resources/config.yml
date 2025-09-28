@@ -12,3 +12,8 @@ separate-inventories: true # Enable/disable separate inventories for realms
 
 # Limits
 invite-timeout-seconds: 60 # Time in seconds before an invitation expires
+
+# World Border Settings
+world-borders: true # Enable/disable world borders globally
+default-world-border: true # Default setting for new players (true/false)
+default-border-color: "BLUE" # Default border color: BLUE, GREEN, RED

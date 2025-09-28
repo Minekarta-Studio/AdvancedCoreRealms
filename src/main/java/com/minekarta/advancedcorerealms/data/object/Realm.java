@@ -18,6 +18,10 @@ public class Realm {
     private boolean isPeacefulMode; // Whether the world is in peaceful mode
     private String worldType;      // The type of world (NORMAL, FLAT, AMPLIFIED, etc.)
     private List<String> transferableItems; // List of items that can be transferred out of the realm
+    private int borderSize;        // Size of the world border for this realm (in blocks)
+    private double centerX;        // Center X coordinate of the realm border
+    private double centerZ;        // Center Z coordinate of the realm border
+    private java.util.Map<String, Integer> upgradeLevels; // Map of upgrade IDs to their levels
     
     public Realm(String name, UUID owner, boolean isFlat) {
         this.name = name;
@@ -31,6 +35,11 @@ public class Realm {
         this.isPeacefulMode = false; // Default to normal mob spawning
         this.worldType = isFlat ? "FLAT" : "NORMAL";
         this.transferableItems = new ArrayList<>(); // Default to no transferable items
+        this.borderSize = 100; // Default border size
+        // Initialize center coordinates to 0,0 (will be updated when world is created/loaded)
+        this.centerX = 0.0;
+        this.centerZ = 0.0;
+        this.upgradeLevels = new java.util.HashMap<>(); // Initialize upgrade levels
     }
     
     // Getters and setters
@@ -169,5 +178,64 @@ public class Realm {
     
     public void removeTransferableItem(String materialName) {
         transferableItems.remove(materialName.toUpperCase());
+    }
+    
+    public int getBorderSize() {
+        return borderSize;
+    }
+    
+    public void setBorderSize(int borderSize) {
+        this.borderSize = borderSize;
+    }
+    
+    public double getCenterX() {
+        return centerX;
+    }
+    
+    public void setCenterX(double centerX) {
+        this.centerX = centerX;
+    }
+    
+    public double getCenterZ() {
+        return centerZ;
+    }
+    
+    public void setCenterZ(double centerZ) {
+        this.centerZ = centerZ;
+    }
+    
+    /**
+     * Updates the center coordinates based on the world's spawn location
+     * This should be called when the realm world is first created or loaded
+     */
+    public void updateCenterFromWorld() {
+        World bukkitWorld = getBukkitWorld();
+        if (bukkitWorld != null) {
+            org.bukkit.Location spawnLocation = bukkitWorld.getSpawnLocation();
+            this.centerX = spawnLocation.getX();
+            this.centerZ = spawnLocation.getZ();
+        }
+    }
+    
+    public java.util.Map<String, Integer> getUpgradeLevels() {
+        return upgradeLevels;
+    }
+    
+    public void setUpgradeLevels(java.util.Map<String, Integer> upgradeLevels) {
+        this.upgradeLevels = upgradeLevels;
+    }
+    
+    public int getUpgradeLevel(String upgradeId) {
+        if (upgradeLevels == null) {
+            upgradeLevels = new java.util.HashMap<>();
+        }
+        return upgradeLevels.getOrDefault(upgradeId, 0);
+    }
+    
+    public void setUpgradeLevel(String upgradeId, int level) {
+        if (upgradeLevels == null) {
+            upgradeLevels = new java.util.HashMap<>();
+        }
+        upgradeLevels.put(upgradeId, level);
     }
 }

@@ -401,6 +401,119 @@ public class GUIManager {
         return owner.getName();
     }
     
+    // Open the border color selection menu
+    public void openBorderColorMenu(Player player) {
+        Inventory inventory = Bukkit.createInventory(null, 27, "Realms | Border Color");
+        
+        // Fill with black glass panes
+        for (int i = 0; i < 27; i++) {
+            inventory.setItem(i, createGlassPane());
+        }
+        
+        // Info Item (Slot 13)
+        ItemStack infoItem = createBookItem("Border Color Selection", 
+            "Select a color for your world border:\n\n" +
+            "BLUE: Standard world border\n" +
+            "GREEN: Smaller warning area\n" +
+            "RED: Larger warning area");
+        inventory.setItem(13, infoItem);
+        
+        // Blue Border (Slot 10)
+        ItemStack blueItem = createItem(Material.BLUE_DYE, "Blue Border", 
+            "Click to set border color to blue");
+        inventory.setItem(10, blueItem);
+        
+        // Green Border (Slot 12)
+        ItemStack greenItem = createItem(Material.GREEN_DYE, "Green Border", 
+            "Click to set border color to green");
+        inventory.setItem(12, greenItem);
+        
+        // Red Border (Slot 14)
+        ItemStack redItem = createItem(Material.RED_DYE, "Red Border", 
+            "Click to set border color to red");
+        inventory.setItem(14, redItem);
+        
+        // Back Button (Slot 22)
+        ItemStack backItem = createItem(Material.BARRIER, "Back", 
+            "Return to main menu");
+        inventory.setItem(22, backItem);
+        
+        player.openInventory(inventory);
+    }
+    
+    // Open the upgrade menu
+    public void openUpgradeMenu(Player player) {
+        // Check if player is the owner of any realm
+        java.util.List<com.minekarta.advancedcorerealms.data.object.Realm> playerRealms = 
+            plugin.getWorldDataManager().getPlayerRealms(player.getUniqueId());
+        com.minekarta.advancedcorerealms.data.object.Realm currentRealm = 
+            playerRealms.stream()
+                .filter(r -> r.getOwner().equals(player.getUniqueId()))
+                .findFirst()
+                .orElse(null);
+                
+        if (currentRealm == null) {
+            player.sendMessage(org.bukkit.ChatColor.RED + "You must own a realm to access upgrades!");
+            return;
+        }
+        
+        // Get all available upgrades
+        java.util.Collection<com.minekarta.advancedcorerealms.upgrades.RealmUpgrade> upgrades = 
+            plugin.getUpgradeManager().getUpgrades();
+        
+        // Calculate inventory size based on number of upgrades (max 54 slots)
+        int inventorySize = Math.min(54, ((upgrades.size() + 8) / 9) * 9); // Round up to nearest 9
+        
+        Inventory inventory = Bukkit.createInventory(null, inventorySize, "Realms | Upgrades");
+        
+        // Fill with black glass panes
+        for (int i = 0; i < inventorySize; i++) {
+            inventory.setItem(i, createGlassPane());
+        }
+        
+        // Info Item (Slot 4)
+        ItemStack infoItem = createBookItem("Upgrade Information", 
+            "Here you can upgrade various aspects of your realm.\n\n" +
+            "Each upgrade has different levels with increasing costs.\n" +
+            "You can only upgrade aspects of realms you own.");
+        inventory.setItem(4, infoItem);
+        
+        // Add upgrade items (starting from slot 9 to leave top row for info)
+        int slot = 9;
+        for (com.minekarta.advancedcorerealms.upgrades.RealmUpgrade upgrade : upgrades) {
+            if (slot >= inventorySize) break; // Don't exceed inventory size
+            
+            int currentLevel = upgrade.getLevel(currentRealm);
+            String materialName = upgrade.getIcon();
+            Material material = Material.matchMaterial(materialName);
+            if (material == null) material = Material.STONE; // Fallback material
+            
+            String displayName = upgrade.getName() + " (Level " + currentLevel + "/" + upgrade.getMaxLevel() + ")";
+            
+            // Calculate cost for next level
+            String lore = upgrade.getDescription() + "\n";
+            if (currentLevel < upgrade.getMaxLevel()) {
+                double nextCost = upgrade.getCost(currentLevel);
+                lore += "Next Level Cost: $" + String.format("%.2f", nextCost) + "\n";
+                lore += "Current Effect: " + upgrade.getEffectValue(currentLevel) + "\n";
+                lore += "Next Effect: " + upgrade.getEffectValue(currentLevel + 1) + "\n";
+                lore += "\n" + org.bukkit.ChatColor.GREEN + "Left-click to upgrade";
+            } else {
+                lore += org.bukkit.ChatColor.GOLD + "MAX LEVEL REACHED";
+            }
+            
+            ItemStack upgradeItem = createItem(material, displayName, lore);
+            inventory.setItem(slot, upgradeItem);
+            slot++;
+        }
+        
+        // Back Button (last slot)
+        ItemStack backItem = createItem(Material.BARRIER, "Back", "Return to main menu");
+        inventory.setItem(inventorySize - 1, backItem);
+        
+        player.openInventory(inventory);
+    }
+    
     // Handle inventory clicks
     public void handleInventoryClick(InventoryClickEvent event, String inventoryTitle) {
         Player player = (Player) event.getWhoClicked();
@@ -424,6 +537,10 @@ public class GUIManager {
             handleRealmPlayersClick(player, event);
         } else if (title.equals("Realms | Create Realm")) {
             handleRealmCreationClick(player, event);
+        } else if (title.equals("Realms | Border Color")) {
+            handleBorderColorClick(player, event);
+        } else if (title.equals("Realms | Upgrades")) {
+            handleUpgradeClick(player, event);
         }
     }
     
@@ -636,6 +753,135 @@ public class GUIManager {
     private void handleRealmCreationClick(Player player, InventoryClickEvent event) {
         event.setCancelled(true);
         // This menu auto-closes after 3 seconds, so no interaction needed
+    }
+    
+    private void handleBorderColorClick(Player player, InventoryClickEvent event) {
+        event.setCancelled(true);
+        ItemStack clickedItem = event.getCurrentItem();
+        
+        if (clickedItem == null || clickedItem.getType() == Material.AIR) return;
+        
+        String displayName = ChatColor.stripColor(clickedItem.getItemMeta().getDisplayName());
+        
+        switch (displayName) {
+            case "Blue Border":
+                // Set border color to blue
+                com.minekarta.advancedcorerealms.api.AdvancedCorePlayer advancedCorePlayer = 
+                    plugin.getAdvancedCorePlayer(player);
+                
+                // Call the event
+                com.minekarta.advancedcorerealms.worldborder.PlayerChangeBorderColorEvent colorEvent = 
+                    new com.minekarta.advancedcorerealms.worldborder.PlayerChangeBorderColorEvent(
+                        player, com.minekarta.advancedcorerealms.worldborder.BorderColor.BLUE);
+                Bukkit.getPluginManager().callEvent(colorEvent);
+                
+                if (!colorEvent.isCancelled()) {
+                    advancedCorePlayer.setBorderColor(com.minekarta.advancedcorerealms.worldborder.BorderColor.BLUE);
+                    player.sendMessage(ColorUtils.processColors("&aBorder color set to blue!"));
+                    player.closeInventory();
+                }
+                break;
+            case "Green Border":
+                // Set border color to green
+                advancedCorePlayer = plugin.getAdvancedCorePlayer(player);
+                
+                // Call the event
+                colorEvent = new com.minekarta.advancedcorerealms.worldborder.PlayerChangeBorderColorEvent(
+                    player, com.minekarta.advancedcorerealms.worldborder.BorderColor.GREEN);
+                Bukkit.getPluginManager().callEvent(colorEvent);
+                
+                if (!colorEvent.isCancelled()) {
+                    advancedCorePlayer.setBorderColor(com.minekarta.advancedcorerealms.worldborder.BorderColor.GREEN);
+                    player.sendMessage(ColorUtils.processColors("&aBorder color set to green!"));
+                    player.closeInventory();
+                }
+                break;
+            case "Red Border":
+                // Set border color to red
+                advancedCorePlayer = plugin.getAdvancedCorePlayer(player);
+                
+                // Call the event
+                colorEvent = new com.minekarta.advancedcorerealms.worldborder.PlayerChangeBorderColorEvent(
+                    player, com.minekarta.advancedcorerealms.worldborder.BorderColor.RED);
+                Bukkit.getPluginManager().callEvent(colorEvent);
+                
+                if (!colorEvent.isCancelled()) {
+                    advancedCorePlayer.setBorderColor(com.minekarta.advancedcorerealms.worldborder.BorderColor.RED);
+                    player.sendMessage(ColorUtils.processColors("&aBorder color set to red!"));
+                    player.closeInventory();
+                }
+                break;
+            case "Back":
+                openMainMenu(player);
+                break;
+        }
+    }
+    
+    private void handleUpgradeClick(Player player, InventoryClickEvent event) {
+        event.setCancelled(true);
+        ItemStack clickedItem = event.getCurrentItem();
+        
+        if (clickedItem == null || clickedItem.getType() == Material.AIR) return;
+        
+        String displayName = ChatColor.stripColor(clickedItem.getItemMeta().getDisplayName());
+        
+        if (displayName.equals("Back")) {
+            openMainMenu(player);
+            return;
+        }
+        
+        // Check if this is an upgrade item (doesn't start with "Back")
+        if (event.getSlot() >= 9) { // Upgrade items start from slot 9
+            // Extract upgrade name from display name (remove the level part)
+            String upgradeName = displayName.split(" \\(")[0]; // Get text before " (Level"
+            
+            // Find the corresponding upgrade
+            com.minekarta.advancedcorerealms.upgrades.RealmUpgrade upgrade = null;
+            for (com.minekarta.advancedcorerealms.upgrades.RealmUpgrade u : plugin.getUpgradeManager().getUpgrades()) {
+                if (u.getName().equals(upgradeName)) {
+                    upgrade = u;
+                    break;
+                }
+            }
+            
+            if (upgrade != null) {
+                // Get the player's realm
+                com.minekarta.advancedcorerealms.data.object.Realm currentRealm = 
+                    plugin.getWorldDataManager().getPlayerRealms(player.getUniqueId()).stream()
+                        .filter(r -> r.getOwner().equals(player.getUniqueId()))
+                        .findFirst()
+                        .orElse(null);
+                        
+                if (currentRealm != null) {
+                    // Check if upgrade is at max level
+                    int currentLevel = upgrade.getLevel(currentRealm);
+                    if (currentLevel >= upgrade.getMaxLevel()) {
+                        player.sendMessage(ChatColor.RED + "This upgrade is already at maximum level!");
+                        return;
+                    }
+                    
+                    // Check if player has enough money
+                    double cost = upgrade.getCost(currentLevel);
+                    if (!plugin.getUpgradeManager().hasEnoughMoney(player, cost)) {
+                        player.sendMessage(ChatColor.RED + "You don't have enough money! Need: $" + String.format("%.2f", cost));
+                        return;
+                    }
+                    
+                    // Perform the upgrade
+                    boolean success = plugin.getUpgradeManager().upgradeRealm(currentRealm, upgrade.getId(), player);
+                    if (success) {
+                        player.sendMessage(ChatColor.GREEN + "Successfully upgraded " + upgrade.getName() + " to level " + (currentLevel + 1) + "!");
+                        
+                        // Reopen the menu to show updated levels
+                        openUpgradeMenu(player);
+                    } else {
+                        player.sendMessage(ChatColor.RED + "Failed to upgrade " + upgrade.getName() + ".");
+                    }
+                } else {
+                    player.sendMessage(ChatColor.RED + "You don't own any realm to upgrade!");
+                }
+            }
+        }
     }
     
     private String extractRealmName(String title) {

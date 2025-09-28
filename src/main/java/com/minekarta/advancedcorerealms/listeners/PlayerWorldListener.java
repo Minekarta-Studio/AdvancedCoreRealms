@@ -1,6 +1,7 @@
 package com.minekarta.advancedcorerealms.listeners;
 
 import com.minekarta.advancedcorerealms.AdvancedCoreRealms;
+import com.minekarta.advancedcorerealms.api.AdvancedCorePlayer;
 import com.minekarta.advancedcorerealms.data.WorldDataManager;
 import com.minekarta.advancedcorerealms.data.object.Realm;
 import org.bukkit.GameMode;
@@ -73,6 +74,10 @@ public class PlayerWorldListener implements Listener {
                     // Otherwise, retain current inventory
                 }
             }
+            
+            // Update world border for the player based on their new location
+            AdvancedCorePlayer advancedCorePlayer = plugin.getAdvancedCorePlayer(player);
+            advancedCorePlayer.updateWorldBorder();
         }
     }
     
@@ -94,6 +99,10 @@ public class PlayerWorldListener implements Listener {
                 player.setGameMode(GameMode.SURVIVAL);
             }
         }
+        
+        // Update world border based on player's current location
+        AdvancedCorePlayer advancedCorePlayer = plugin.getAdvancedCorePlayer(event.getPlayer());
+        advancedCorePlayer.updateWorldBorder();
     }
     
     @EventHandler
@@ -108,6 +117,10 @@ public class PlayerWorldListener implements Listener {
             org.bukkit.inventory.ItemStack[] contents = currentInventory.getContents();
             plugin.getPlayerDataManager().savePlayerInventory(player.getUniqueId(), currentWorld, contents);
         }
+        
+        // Remove world border when player quits
+        AdvancedCorePlayer advancedCorePlayer = plugin.getAdvancedCorePlayer(event.getPlayer());
+        advancedCorePlayer.removeWorldBorder();
     }
     
     private boolean isRealmWorld(String worldName) {
