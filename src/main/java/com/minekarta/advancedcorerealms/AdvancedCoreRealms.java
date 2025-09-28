@@ -6,6 +6,7 @@ import com.minekarta.advancedcorerealms.upgrades.UpgradeManager;
 import com.minekarta.advancedcorerealms.commands.RealmsCommand;
 import com.minekarta.advancedcorerealms.data.PlayerDataManager;
 import com.minekarta.advancedcorerealms.data.WorldDataManager;
+import com.minekarta.advancedcorerealms.gui.GUIManager;
 import com.minekarta.advancedcorerealms.listeners.InventoryClickListener;
 import com.minekarta.advancedcorerealms.listeners.InventoryListener;
 import com.minekarta.advancedcorerealms.listeners.PlayerConnectionListener;
@@ -28,6 +29,7 @@ public class AdvancedCoreRealms extends JavaPlugin {
     private WorldDataManager worldDataManager;
     private PlayerDataManager playerDataManager;
     private MenuManager menuManager;
+    private GUIManager guiManager;
     private UpgradeManager upgradeManager;
     private PlayerStateManager playerStateManager;
     
@@ -42,6 +44,7 @@ public class AdvancedCoreRealms extends JavaPlugin {
         this.worldManager = new WorldManager(this);
         this.inviteManager = new InviteManager(this);
         this.menuManager = new MenuManager(this);
+        this.guiManager = new GUIManager(this);
         this.upgradeManager = new UpgradeManager(this);
         this.playerStateManager = new PlayerStateManager(this);
         

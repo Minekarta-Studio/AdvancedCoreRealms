@@ -54,7 +54,7 @@ public class UpgradeMenu extends Menu {
         if (playerRealm == null) {
             inventory.setItem(22, createGuiItem(Material.BARRIER, "<red>No Realm Found", "<gray>You must own a realm to upgrade it."));
         } else {
-            List<RealmUpgrade> upgrades = plugin.getUpgradeManager().getUpgrades();
+            List<RealmUpgrade> upgrades = new ArrayList<>(plugin.getUpgradeManager().getUpgrades());
             int slot = 10; // Starting slot for upgrades
             for (RealmUpgrade upgrade : upgrades) {
                 if (slot > 43) break; // Don't override bottom bar
@@ -78,7 +78,10 @@ public class UpgradeMenu extends Menu {
         int maxLevel = upgrade.getMaxLevel();
         double cost = upgrade.getCost(currentLevel);
 
-        Material material = upgrade.getIcon();
+        Material material = Material.matchMaterial(upgrade.getIcon());
+        if (material == null) {
+            material = Material.STONE;
+        }
         String name = "<gold>" + upgrade.getName() + "</gold>";
 
         List<String> lore = new ArrayList<>();

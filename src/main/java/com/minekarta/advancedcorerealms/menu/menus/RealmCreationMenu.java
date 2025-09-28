@@ -48,7 +48,7 @@ public class RealmCreationMenu extends Menu {
     }
 
     private void autoClose() {
-        Bukkit.getScheduler().runTaskLater(plugin, player::closeInventory, 60L); // 3 seconds
+        Bukkit.getScheduler().runTaskLater(plugin, (Runnable) player::closeInventory, 60L); // 3 seconds
     }
 
     @Override
