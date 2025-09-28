@@ -48,7 +48,7 @@ public class RealmsCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
             
-            plugin.getGuiManager().openMainMenu(player);
+            plugin.getMenuManager().openMainMenu(player);
             return true;
         }
         
@@ -197,7 +197,7 @@ public class RealmsCommand implements CommandExecutor, TabCompleter {
     private void handleUpgrade(Player player, String[] args) {
         if (args.length == 1) {
             // Open upgrade menu
-            plugin.getGuiManager().openUpgradeMenu(player);
+            plugin.getMenuManager().openUpgradeMenu(player);
             return;
         }
         
@@ -261,7 +261,7 @@ public class RealmsCommand implements CommandExecutor, TabCompleter {
         
         if (args.length == 1) {
             // Open GUI for color selection
-            plugin.getGuiManager().openBorderColorMenu(player);
+            plugin.getMenuManager().openBorderColorMenu(player);
             return;
         }
         
