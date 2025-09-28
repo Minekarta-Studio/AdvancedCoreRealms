@@ -3,11 +3,14 @@ package com.minekarta.advancedcorerealms.listeners;
 import com.minekarta.advancedcorerealms.AdvancedCoreRealms;
 import com.minekarta.advancedcorerealms.data.WorldDataManager;
 import com.minekarta.advancedcorerealms.data.object.Realm;
+import org.bukkit.GameMode;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.PlayerInventory;
 
 public class PlayerWorldListener implements Listener {
@@ -46,6 +49,19 @@ public class PlayerWorldListener implements Listener {
                     // Load realm-specific inventory
                     org.bukkit.inventory.ItemStack[] realmInventory = plugin.getPlayerDataManager().loadPlayerInventory(player.getUniqueId(), toWorld.getName());
                     player.getInventory().setContents(realmInventory);
+                    
+                    // Set game mode based on realm settings
+                    Realm realm = worldDataManager.getRealm(toWorld.getName());
+                    if (realm != null) {
+                        if (realm.isCreativeMode()) {
+                            player.setGameMode(GameMode.CREATIVE);
+                        } else {
+                            player.setGameMode(GameMode.SURVIVAL);
+                        }
+                    }
+                    
+                    // Set max players for the world if needed
+                    // This is more of a server-level setting, but we track it in the realm
                 } else if (fromIsRealm) {
                     // Going from realm to normal world, load world-specific inventory
                     // In this case, we would typically load the main world inventory if we were tracking it separately
@@ -57,6 +73,40 @@ public class PlayerWorldListener implements Listener {
                     // Otherwise, retain current inventory
                 }
             }
+        }
+    }
+    
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        String currentWorld = player.getWorld().getName();
+        
+        // Load inventory if player is in a realm
+        Realm currentRealm = plugin.getWorldDataManager().getRealm(currentWorld);
+        if (currentRealm != null) {
+            org.bukkit.inventory.ItemStack[] realmInventory = plugin.getPlayerDataManager().loadPlayerInventory(player.getUniqueId(), currentWorld);
+            player.getInventory().setContents(realmInventory);
+            
+            // Set game mode based on realm settings
+            if (currentRealm.isCreativeMode()) {
+                player.setGameMode(GameMode.CREATIVE);
+            } else {
+                player.setGameMode(GameMode.SURVIVAL);
+            }
+        }
+    }
+    
+    @EventHandler
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        Player player = event.getPlayer();
+        String currentWorld = player.getWorld().getName();
+        
+        // Save player inventory when they quit if they were in a realm
+        Realm currentRealm = plugin.getWorldDataManager().getRealm(currentWorld);
+        if (currentRealm != null) {
+            PlayerInventory currentInventory = player.getInventory();
+            org.bukkit.inventory.ItemStack[] contents = currentInventory.getContents();
+            plugin.getPlayerDataManager().savePlayerInventory(player.getUniqueId(), currentWorld, contents);
         }
     }
     

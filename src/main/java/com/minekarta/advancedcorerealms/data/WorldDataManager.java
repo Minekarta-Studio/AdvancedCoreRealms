@@ -53,8 +53,11 @@ public class WorldDataManager {
                 }
             }
             
+            List<String> transferableItems = worldsConfig.getStringList(realmName + ".transferable-items");
+            
             Realm realm = new Realm(realmName, owner, isFlat);
             realm.setMembers(members);
+            realm.setTransferableItems(transferableItems);
             realms.put(realmName, realm);
         }
         
@@ -75,6 +78,8 @@ public class WorldDataManager {
                 memberStrings.add(member.toString());
             }
             worldsConfig.set(realmName + ".members", memberStrings);
+            
+            worldsConfig.set(realmName + ".transferable-items", realm.getTransferableItems());
         }
         
         try {

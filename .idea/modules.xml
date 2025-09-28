@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/AdvancedCoreRealms.iml" filepath="$PROJECT_DIR$/AdvancedCoreRealms.iml" />
+      <module fileurl="file://$PROJECT_DIR$/advancedrealmcore.iml" filepath="$PROJECT_DIR$/advancedrealmcore.iml" />
     </modules>
   </component>
 </project>

@@ -139,4 +139,55 @@ public class PlayerDataManager {
     private File getPlayerDataFile(UUID playerUUID) {
         return new File(playerDataFolder, playerUUID.toString() + ".yml");
     }
+    
+    /**
+     * Save player's state when entering a realm (inventory, location, etc.)
+     */
+    public void savePlayerState(UUID playerUUID, String worldName) {
+        File playerFile = getPlayerDataFile(playerUUID);
+        FileConfiguration config = YamlConfiguration.loadConfiguration(playerFile);
+        
+        // Save current location before entering realm
+        org.bukkit.entity.Player player = org.bukkit.Bukkit.getPlayer(playerUUID);
+        if (player != null) {
+            org.bukkit.Location currentLocation = player.getLocation();
+            config.set("world_states." + worldName + ".location.world", currentLocation.getWorld().getName());
+            config.set("world_states." + worldName + ".location.x", currentLocation.getX());
+            config.set("world_states." + worldName + ".location.y", currentLocation.getY());
+            config.set("world_states." + worldName + ".location.z", currentLocation.getZ());
+            config.set("world_states." + worldName + ".location.yaw", currentLocation.getYaw());
+            config.set("world_states." + worldName + ".location.pitch", currentLocation.getPitch());
+        }
+        
+        // Save inventory for the world
+        if (player != null) {
+            ItemStack[] inventory = player.getInventory().getContents();
+            savePlayerInventory(playerUUID, worldName, inventory);
+        }
+        
+        try {
+            config.save(playerFile);
+        } catch (IOException e) {
+            plugin.getLogger().severe("Could not save player state data: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Load player's state when entering a realm (inventory, location, etc.)
+     */
+    public void loadPlayerState(UUID playerUUID, String worldName) {
+        File playerFile = getPlayerDataFile(playerUUID);
+        if (!playerFile.exists()) {
+            return; // No saved state for this player
+        }
+        
+        FileConfiguration config = YamlConfiguration.loadConfiguration(playerFile);
+        
+        // Load inventory for the world
+        ItemStack[] inventory = loadPlayerInventory(playerUUID, worldName);
+        org.bukkit.entity.Player player = org.bukkit.Bukkit.getPlayer(playerUUID);
+        if (player != null) {
+            player.getInventory().setContents(inventory);
+        }
+    }
 }

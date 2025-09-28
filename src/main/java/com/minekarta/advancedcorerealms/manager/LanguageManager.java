@@ -1,10 +1,11 @@
 package com.minekarta.advancedcorerealms.manager;
 
 import com.minekarta.advancedcorerealms.AdvancedCoreRealms;
-import org.bukkit.ChatColor;
+import com.minekarta.advancedcorerealms.utils.ColorUtils;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,10 +17,12 @@ public class LanguageManager {
     private final AdvancedCoreRealms plugin;
     private final Map<String, FileConfiguration> languageConfigs;
     private String currentLanguage;
+    private final MiniMessage miniMessage;
     
     public LanguageManager(AdvancedCoreRealms plugin) {
         this.plugin = plugin;
         this.languageConfigs = new HashMap<>();
+        this.miniMessage = MiniMessage.miniMessage();
     }
     
     public void loadLanguage() {
@@ -64,39 +67,39 @@ public class LanguageManager {
                     
                     // English defaults
                     if (lang.equals("en")) {
-                        config.set("prefix", "&8[&bRealms&8] &r");
-                        config.set("command.help", "&aShowing help for AdvancedCoreRealms...");
-                        config.set("command.reloaded", "&aConfiguration reloaded successfully.");
-                        config.set("world.created", "&aSuccessfully created your new realm named &e%world%&a.");
-                        config.set("world.deleted", "&cSuccessfully deleted your realm &e%world%&c.");
-                        config.set("world.teleport", "&7Teleporting you to &e%world%&7...");
-                        config.set("error.no-permission", "&cYou do not have permission to use this command.");
-                        config.set("error.world-exists", "&cA realm with that name already exists.");
-                        config.set("error.not-owner", "&cYou are not the owner of this realm.");
+                        config.set("prefix", "<dark_gray>[<aqua>Realms<dark_gray>] <reset>");
+                        config.set("command.help", "<green>Showing help for AdvancedCoreRealms...");
+                        config.set("command.reloaded", "<green>Configuration reloaded successfully.");
+                        config.set("world.created", "<green>Successfully created your new realm named <yellow>%world%<green>.");
+                        config.set("world.deleted", "<red>Successfully deleted your realm <yellow>%world%<red>.");
+                        config.set("world.teleport", "<gray>Teleporting you to <yellow>%world%<gray>...");
+                        config.set("error.no-permission", "<red>You do not have permission to use this command.");
+                        config.set("error.world-exists", "<red>A realm with that name already exists.");
+                        config.set("error.not-owner", "<red>You are not the owner of this realm.");
                     }
                     // Spanish defaults
                     else if (lang.equals("es")) {
-                        config.set("prefix", "&8[&bReinos&8] &r");
-                        config.set("command.help", "&aMostrando ayuda para AdvancedCoreRealms...");
-                        config.set("command.reloaded", "&aConfiguración recargada exitosamente.");
-                        config.set("world.created", "&aSe creó exitosamente tu nuevo reino llamado &e%world%&a.");
-                        config.set("world.deleted", "&cSe eliminó exitosamente tu reino &e%world%&c.");
-                        config.set("world.teleport", "&7Teletransportándote a &e%world%&7...");
-                        config.set("error.no-permission", "&cNo tienes permiso para usar este comando.");
-                        config.set("error.world-exists", "&cYa existe un reino con ese nombre.");
-                        config.set("error.not-owner", "&cNo eres el propietario de este reino.");
+                        config.set("prefix", "<dark_gray>[<aqua>Reinos<dark_gray>] <reset>");
+                        config.set("command.help", "<green>Mostrando ayuda para AdvancedCoreRealms...");
+                        config.set("command.reloaded", "<green>Configuración recargada exitosamente.");
+                        config.set("world.created", "<green>Se creó exitosamente tu nuevo reino llamado <yellow>%world%<green>.");
+                        config.set("world.deleted", "<red>Se eliminó exitosamente tu reino <yellow>%world%<red>.");
+                        config.set("world.teleport", "<gray>Teletransportándote a <yellow>%world%<gray>...");
+                        config.set("error.no-permission", "<red>No tienes permiso para usar este comando.");
+                        config.set("error.world-exists", "<red>Ya existe un reino con ese nombre.");
+                        config.set("error.not-owner", "<red>No eres el propietario de este reino.");
                     }
                     // Indonesian defaults
                     else if (lang.equals("id")) {
-                        config.set("prefix", "&8[&bRealms&8] &r");
-                        config.set("command.help", "&aMenampilkan bantuan untuk AdvancedCoreRealms...");
-                        config.set("command.reloaded", "&aKonfigurasi berhasil dimuat ulang.");
-                        config.set("world.created", "&aBerhasil membuat realm baru bernama &e%world%&a.");
-                        config.set("world.deleted", "&cBerhasil menghapus realm &e%world%&c.");
-                        config.set("world.teleport", "&7Teleportasi ke &e%world%&7...");
-                        config.set("error.no-permission", "&cAnda tidak memiliki izin untuk menggunakan perintah ini.");
-                        config.set("error.world-exists", "&cRealm dengan nama tersebut sudah ada.");
-                        config.set("error.not-owner", "&cAnda bukan pemilik dari realm ini.");
+                        config.set("prefix", "<dark_gray>[<aqua>Realms<dark_gray>] <reset>");
+                        config.set("command.help", "<green>Menampilkan bantuan untuk AdvancedCoreRealms...");
+                        config.set("command.reloaded", "<green>Konfigurasi berhasil dimuat ulang.");
+                        config.set("world.created", "<green>Berhasil membuat realm baru bernama <yellow>%world%<green>.");
+                        config.set("world.deleted", "<red>Berhasil menghapus realm <yellow>%world%<red>.");
+                        config.set("world.teleport", "<gray>Teleportasi ke <yellow>%world%<gray>...");
+                        config.set("error.no-permission", "<red>Anda tidak memiliki izin untuk menggunakan perintah ini.");
+                        config.set("error.world-exists", "<red>Realm dengan nama tersebut sudah ada.");
+                        config.set("error.not-owner", "<red>Anda bukan pemilik dari realm ini.");
                     }
                     
                     config.save(languageFile);
@@ -118,7 +121,7 @@ public class LanguageManager {
         if (config != null) {
             String message = config.getString(key);
             if (message != null) {
-                return ChatColor.translateAlternateColorCodes('&', message);
+                return message; // Return raw message, let ColorUtils handle formatting
             }
         }
         
@@ -126,7 +129,7 @@ public class LanguageManager {
         FileConfiguration enConfig = languageConfigs.get("en");
         if (enConfig != null) {
             String message = enConfig.getString(key, key); // Return key if not found
-            return ChatColor.translateAlternateColorCodes('&', message);
+            return message; // Return raw message, let ColorUtils handle formatting
         }
         
         return key; // Return the key if no language files are available
@@ -143,6 +146,24 @@ public class LanguageManager {
         }
         
         return message;
+    }
+    
+    public Component getMessageAsComponent(String key) {
+        String message = getMessage(key);
+        return miniMessage.deserialize(message);
+    }
+    
+    public Component getMessageAsComponent(String key, String... placeholders) {
+        String message = getMessage(key);
+        
+        // Replace placeholders in the format %placeholder%
+        for (int i = 0; i < placeholders.length; i += 2) {
+            if (i + 1 < placeholders.length) {
+                message = message.replace(placeholders[i], placeholders[i + 1]);
+            }
+        }
+        
+        return miniMessage.deserialize(message);
     }
     
     public void setCurrentLanguage(String languageCode) {

@@ -17,6 +17,7 @@ public class Realm {
     private boolean isCreativeMode; // Whether the world is in creative or survival
     private boolean isPeacefulMode; // Whether the world is in peaceful mode
     private String worldType;      // The type of world (NORMAL, FLAT, AMPLIFIED, etc.)
+    private List<String> transferableItems; // List of items that can be transferred out of the realm
     
     public Realm(String name, UUID owner, boolean isFlat) {
         this.name = name;
@@ -29,6 +30,7 @@ public class Realm {
         this.isCreativeMode = false; // Default to survival
         this.isPeacefulMode = false; // Default to normal mob spawning
         this.worldType = isFlat ? "FLAT" : "NORMAL";
+        this.transferableItems = new ArrayList<>(); // Default to no transferable items
     }
     
     // Getters and setters
@@ -145,5 +147,27 @@ public class Realm {
      */
     public World getBukkitWorld() {
         return org.bukkit.Bukkit.getWorld(name);
+    }
+    
+    public List<String> getTransferableItems() {
+        return transferableItems;
+    }
+    
+    public void setTransferableItems(List<String> transferableItems) {
+        this.transferableItems = transferableItems;
+    }
+    
+    public boolean isItemTransferable(String materialName) {
+        return transferableItems.contains(materialName.toUpperCase());
+    }
+    
+    public void addTransferableItem(String materialName) {
+        if (!transferableItems.contains(materialName.toUpperCase())) {
+            transferableItems.add(materialName.toUpperCase());
+        }
+    }
+    
+    public void removeTransferableItem(String materialName) {
+        transferableItems.remove(materialName.toUpperCase());
     }
 }

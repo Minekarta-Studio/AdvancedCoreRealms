@@ -44,8 +44,7 @@ public class RealmsCommand implements CommandExecutor, TabCompleter {
                 return true;
             }
             
-            // TODO: Open main GUI
-            player.sendMessage(ChatColor.GOLD + "Opening Realms GUI...");
+            plugin.getGuiManager().openMainMenu(player);
             return true;
         }
         
@@ -83,6 +82,9 @@ public class RealmsCommand implements CommandExecutor, TabCompleter {
             case "transfer":
                 handleTransfer(player, args);
                 break;
+            case "back":
+                handleBack(player);
+                break;
             case "debug":
             case "test":
                 handleDebug(player);
@@ -105,17 +107,41 @@ public class RealmsCommand implements CommandExecutor, TabCompleter {
     }
     
     private void handleCreate(Player player, String[] args) {
+        // Check permissions and if player is running the command
         if (!player.hasPermission("advancedcorerealms.user.create")) {
             MessageUtils.sendMessage(player, "error.no-permission");
             return;
         }
         
+        // Validate arguments - check if world name is provided
         if (args.length < 2) {
             player.sendMessage(ChatColor.RED + "Usage: /realms create <name> [type]");
             return;
         }
         
         String worldName = args[1];
+        
+        // Check if world already exists
+        if (Bukkit.getWorld(worldName) != null || plugin.getWorldDataManager().getRealm(worldName) != null) {
+            player.sendMessage(ChatColor.RED + "Realms with this name already exists. Please use another name!");
+            return;
+        }
+        
+        // Determine maximum number of realms based on permission
+        int maxRealms = 1; // Default
+        if (player.hasPermission("advancedcorerealms.limit.realms.3")) maxRealms = 3;
+        if (player.hasPermission("advancedcorerealms.limit.realms.5")) maxRealms = 5;
+        
+        // Calculate current number of realms owned by player
+        int playerRealms = plugin.getWorldDataManager().getPlayerRealms(player.getUniqueId()).size();
+        
+        // Check if player has reached maximum number of realms
+        if (playerRealms >= maxRealms) {
+            player.sendMessage(ChatColor.RED + "You have reached the maximum number of Realms");
+            return;
+        }
+        
+        // Process world type
         String worldType = plugin.getConfig().getString("default-world-type", "FLAT").toUpperCase();
         
         if (args.length >= 3) {
@@ -128,23 +154,13 @@ public class RealmsCommand implements CommandExecutor, TabCompleter {
             }
         }
         
-        // Check if world already exists
-        if (Bukkit.getWorld(worldName) != null || plugin.getWorldDataManager().getRealm(worldName) != null) {
-            MessageUtils.sendMessage(player, "error.world-exists");
-            return;
-        }
+        // Save player's current location before creating realm
+        plugin.getPlayerDataManager().savePreviousLocation(player.getUniqueId(), player.getLocation());
         
-        // Check realm limit
-        int maxRealms = 1; // Default
-        if (player.hasPermission("advancedcorerealms.limit.realms.3")) maxRealms = 3;
-        if (player.hasPermission("advancedcorerealms.limit.realms.5")) maxRealms = 5;
+        // Send message to player while world is being created
+        player.sendMessage(ChatColor.YELLOW + "Creating Realms, Please wait");
         
-        int playerRealms = plugin.getWorldDataManager().getPlayerRealms(player.getUniqueId()).size();
-        if (playerRealms >= maxRealms) {
-            player.sendMessage(ChatColor.RED + "You have reached your realm limit!");
-            return;
-        }
-        
+        // Create the world
         worldManager.createWorldAsync(player, worldName, worldType);
     }
     
@@ -310,6 +326,22 @@ public class RealmsCommand implements CommandExecutor, TabCompleter {
         player.sendMessage(ChatColor.GREEN + "Realm ownership transferred successfully!");
     }
     
+    private void handleBack(Player player) {
+        if (!player.hasPermission("advancedcorerealms.user.back")) {
+            MessageUtils.sendMessage(player, "error.no-permission");
+            return;
+        }
+        
+        org.bukkit.Location previousLocation = plugin.getPlayerDataManager().loadPreviousLocation(player.getUniqueId());
+        if (previousLocation == null) {
+            player.sendMessage(ChatColor.RED + "No previous location found!");
+            return;
+        }
+        
+        player.teleport(previousLocation);
+        player.sendMessage(ChatColor.GREEN + "Teleported to your previous location.");
+    }
+    
     private void handleDebug(Player player) {
         if (!player.hasPermission("advancedcorerealms.admin.debug")) {
             MessageUtils.sendMessage(player, "error.no-permission");
@@ -328,7 +360,7 @@ public class RealmsCommand implements CommandExecutor, TabCompleter {
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
         if (args.length == 1) {
             List<String> subcommands = Arrays.asList("help", "create", "delete", "tp", "teleport", "list", 
-                    "invite", "accept", "deny", "reload", "transfer", "debug", "test");
+                    "invite", "accept", "deny", "reload", "transfer", "back", "debug", "test");
             return filterByPrefix(subcommands, args[0]);
         } else if (args.length == 2) {
             String subcommand = args[0].toLowerCase();

@@ -3,7 +3,12 @@ package com.minekarta.advancedcorerealms;
 import com.minekarta.advancedcorerealms.commands.RealmsCommand;
 import com.minekarta.advancedcorerealms.data.PlayerDataManager;
 import com.minekarta.advancedcorerealms.data.WorldDataManager;
+import com.minekarta.advancedcorerealms.gui.GUIManager;
+import com.minekarta.advancedcorerealms.listeners.InventoryClickListener;
+import com.minekarta.advancedcorerealms.listeners.InventoryListener;
 import com.minekarta.advancedcorerealms.listeners.PlayerConnectionListener;
+import com.minekarta.advancedcorerealms.manager.MenuManager;
+import com.minekarta.advancedcorerealms.placeholder.AdvancedCoreRealmsPlaceholder;
 import com.minekarta.advancedcorerealms.listeners.PlayerWorldListener;
 import com.minekarta.advancedcorerealms.manager.InviteManager;
 import com.minekarta.advancedcorerealms.manager.LanguageManager;
@@ -18,6 +23,8 @@ public class AdvancedCoreRealms extends JavaPlugin {
     private LanguageManager languageManager;
     private WorldDataManager worldDataManager;
     private PlayerDataManager playerDataManager;
+    private GUIManager guiManager;
+    private MenuManager menuManager;
     
     @Override
     public void onEnable() {
@@ -29,6 +36,13 @@ public class AdvancedCoreRealms extends JavaPlugin {
         this.worldDataManager = new WorldDataManager(this);
         this.worldManager = new WorldManager(this);
         this.inviteManager = new InviteManager(this);
+        this.guiManager = new GUIManager(this);
+        this.menuManager = new MenuManager(this);
+        
+        // Register PlaceholderAPI if it's available
+        if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
+            new AdvancedCoreRealmsPlaceholder(this).register();
+        }
         
         // Load configuration
         saveDefaultConfig();
@@ -41,6 +55,8 @@ public class AdvancedCoreRealms extends JavaPlugin {
         // Register listeners
         getServer().getPluginManager().registerEvents(new PlayerConnectionListener(this), this);
         getServer().getPluginManager().registerEvents(new PlayerWorldListener(this), this);
+        getServer().getPluginManager().registerEvents(new InventoryListener(this), this);
+        getServer().getPluginManager().registerEvents(new InventoryClickListener(this), this);
         
         // Initialize data managers
         this.worldDataManager.loadData();
@@ -80,5 +96,13 @@ public class AdvancedCoreRealms extends JavaPlugin {
     
     public PlayerDataManager getPlayerDataManager() {
         return playerDataManager;
+    }
+    
+    public GUIManager getGuiManager() {
+        return guiManager;
+    }
+    
+    public MenuManager getMenuManager() {
+        return menuManager;
     }
 }
