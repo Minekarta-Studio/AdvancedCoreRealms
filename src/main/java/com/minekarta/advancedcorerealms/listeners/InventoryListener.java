@@ -29,6 +29,18 @@ public class InventoryListener implements Listener {
         }
         
         Player player = (Player) event.getWhoClicked();
+        
+        // Check if player is viewing a menu
+        if (event.getView().getTitle().startsWith("AdvancedCoreRealms") || 
+            event.getView().getTitle().startsWith("Realms |")) {
+            // Cancel all clicks in menus to prevent item movement
+            event.setCancelled(true);
+            
+            // Allow clicks to be processed by the click handler
+            // The click handler will determine what to do based on the clicked item
+            return;
+        }
+        
         String currentWorldName = player.getWorld().getName();
         
         // Check if player is in a realm
@@ -74,6 +86,15 @@ public class InventoryListener implements Listener {
         }
         
         Player player = (Player) event.getWhoClicked();
+        
+        // Check if player is viewing a menu
+        if (event.getView().getTitle().startsWith("AdvancedCoreRealms") || 
+            event.getView().getTitle().startsWith("Realms |")) {
+            // Cancel all drags in menus to prevent item movement
+            event.setCancelled(true);
+            return;
+        }
+        
         String currentWorldName = player.getWorld().getName();
         
         // Check if player is in a realm

@@ -30,6 +30,7 @@ public class AdvancedCoreRealms extends JavaPlugin {
     private GUIManager guiManager;
     private MenuManager menuManager;
     private UpgradeManager upgradeManager;
+    private PlayerStateManager playerStateManager;
     
     @Override
     public void onEnable() {
@@ -44,6 +45,7 @@ public class AdvancedCoreRealms extends JavaPlugin {
         this.guiManager = new GUIManager(this);
         this.menuManager = new MenuManager(this);
         this.upgradeManager = new UpgradeManager(this);
+        this.playerStateManager = new PlayerStateManager(this);
         
         // Register PlaceholderAPI if it's available
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
@@ -118,6 +120,10 @@ public class AdvancedCoreRealms extends JavaPlugin {
     
     public UpgradeManager getUpgradeManager() {
         return upgradeManager;
+    }
+    
+    public PlayerStateManager getPlayerStateManager() {
+        return playerStateManager;
     }
     
     // Cache for AdvancedCorePlayer instances

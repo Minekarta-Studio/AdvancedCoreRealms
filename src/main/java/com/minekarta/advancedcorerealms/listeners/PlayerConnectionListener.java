@@ -35,6 +35,9 @@ public class PlayerConnectionListener implements Listener {
         // Save any pending data when player leaves
         plugin.getWorldDataManager().saveData();
         
+        // Clear the player's state in the state manager
+        plugin.getPlayerStateManager().clearState(event.getPlayer());
+        
         // Remove the player from the AdvancedCorePlayer cache
         plugin.removeAdvancedCorePlayer(event.getPlayer());
     }
