@@ -1,0 +1,41 @@
+# Realms List Menu Configuration
+# All GUI elements can be customized here
+# Use standard Minecraft material names for items
+# Use color codes (&) or hex colors (#RRGGBB) and gradients ({#RRGGBB>RRGGBB}text{/#})
+
+realms_list:
+  title: "{#6677ee>99ffcc}My Realms{/#}"
+  size: 54
+  elements:
+    info_item:
+      slot: 4
+      material: "WRITTEN_BOOK"
+      name: "{#6677ee>99ffcc}Realms Info{/#}"
+      lore:
+        - "{#6677ee>99ffcc}These are the Realms you own{/#}"
+    
+    back_button:
+      slot: 49
+      material: "BARRIER"
+      name: "{#ff5555>ff9999}Back{/#}"
+      lore:
+        - "{#ff5555>ff9999}Return to main menu{/#}"
+    
+    prev_page:
+      slot: 45
+      material: "ARROW"
+      name: "{#6677ee>99ffcc}Previous Page{/#}"
+      lore:
+        - "{#6677ee>99ffcc}Go to previous page{/#}"
+    
+    next_page:
+      slot: 53
+      material: "ARROW"
+      name: "{#6677ee>99ffcc}Next Page{/#}"
+      lore:
+        - "{#6677ee>99ffcc}Go to next page{/#}"
+    
+    glass_panes:
+      material: "BLACK_STAINED_GLASS_PANE"
+      name: " "
+      fill_remaining: true

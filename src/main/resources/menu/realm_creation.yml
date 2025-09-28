@@ -1,0 +1,26 @@
+# Realm Creation Menu Configuration
+# All GUI elements can be customized here
+# Use standard Minecraft material names for items
+# Use color codes (&) or hex colors (#RRGGBB) and gradients ({#RRGGBB>RRGGBB}text{/#})
+
+realm_creation:
+  title: "{#6677ee>99ffcc}Realms | Create Realm{/#}"
+  size: 27
+  elements:
+    info_item:
+      slot: 13
+      material: "WRITTEN_BOOK"
+      name: "{#6677ee>99ffcc}Create Realm{/#}"
+      lore:
+        - "{#6677ee>99ffcc}To create a realm:{/#}"
+        - "{#6677ee>99ffcc}1. Close this menu{/#}"
+        - "{#6677ee>99ffcc}2. Type /realms create <name> [type]{/#}"
+        - "{#6677ee>99ffcc}In chat with the name you want.{/#}"
+        - ""
+        - "{#6677ee>99ffcc}Valid types: FLAT, NORMAL, AMPLIFIED{/#}"
+        - "{#6677ee>99ffcc}Names can only contain letters, numbers, and underscores.{/#}"
+    
+    glass_panes:
+      material: "BLACK_STAINED_GLASS_PANE"
+      name: " "
+      fill_remaining: true

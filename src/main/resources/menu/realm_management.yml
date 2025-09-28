@@ -1,0 +1,70 @@
+# Realm Management Menu Configuration
+# All GUI elements can be customized here
+# Use standard Minecraft material names for items
+# Use color codes (&) or hex colors (#RRGGBB) and gradients ({#RRGGBB>RRGGBB}text{/#})
+
+realm_management:
+  title: "{#6677ee>99ffcc}Realms | Realm: [name]{/#}"
+  size: 36
+  elements:
+    info_item:
+      slot: 4
+      material: "WRITTEN_BOOK"
+      name: "{#6677ee>99ffcc}Realm Info{/#}"
+      lore:
+        - "{#6677ee>99ffcc}Information about this realm{/#}"
+    
+    teleport:
+      slot: 10
+      material: "ENDER_PEARL"
+      name: "{#6677ee>99ffcc}Teleport{/#}"
+      lore:
+        - "{#6677ee>99ffcc}Teleport to this Realm{/#}"
+    
+    manage_players:
+      slot: 12
+      material: "PLAYER_HEAD"
+      name: "{#6677ee>99ffcc}Manage Players{/#}"
+      permission_required: "realm.owner,advancedcorerealms.admin.*"
+      lore:
+        - "{#6677ee>99ffcc}Manage access for this Realm{/#}"
+      no_permission_material: "GRAY_STAINED_GLASS_PANE"
+      no_permission_name: "{#999999>cccccc}Manage Players{/#}"
+      no_permission_lore:
+        - "{#999999>cccccc}You don't have permission{/#}"
+    
+    realm_settings:
+      slot: 14
+      material: "COMPARATOR"
+      name: "{#6677ee>99ffcc}Realm Settings{/#}"
+      permission_required: "realm.owner,advancedcorerealms.admin.*"
+      lore:
+        - "{#6677ee>99ffcc}Change settings for this Realm{/#}"
+      no_permission_material: "GRAY_STAINED_GLASS_PANE"
+      no_permission_name: "{#999999>cccccc}Realm Settings{/#}"
+      no_permission_lore:
+        - "{#999999>cccccc}You don't have permission{/#}"
+    
+    delete_realm:
+      slot: 16
+      material: "TNT"
+      name: "{#ff5555>ff9999}Delete Realm{/#}"
+      permission_required: "realm.owner,advancedcorerealms.admin.*"
+      lore:
+        - "{#ff5555>ff9999}Delete this Realm (Cannot be undone!){/#}"
+      no_permission_material: "GRAY_STAINED_GLASS_PANE"
+      no_permission_name: "{#999999>cccccc}Delete Realm{/#}"
+      no_permission_lore:
+        - "{#999999>cccccc}You don't have permission{/#}"
+    
+    back_button:
+      slot: 31
+      material: "BARRIER"
+      name: "{#ff5555>ff9999}Back{/#}"
+      lore:
+        - "{#ff5555>ff9999}Return to Realms list{/#}"
+    
+    glass_panes:
+      material: "BLACK_STAINED_GLASS_PANE"
+      name: " "
+      fill_remaining: true

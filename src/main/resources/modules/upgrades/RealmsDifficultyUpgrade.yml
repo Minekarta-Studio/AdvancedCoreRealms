@@ -1,0 +1,14 @@
+# Realms Difficulty Upgrade Configuration
+# This upgrade allows players to adjust difficulty settings in their realm
+name: "Difficulty"
+description: "Change the difficulty of your realm (Peaceful/Normal/Hard)"
+max-level: 3
+icon: "DIAMOND_SWORD"
+prices:
+  1: 1000.0
+  2: 2500.0
+  3: 5000.0
+effects:
+  1: "PEACEFUL"
+  2: "NORMAL"
+  3: "HARD"

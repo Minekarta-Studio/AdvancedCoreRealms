@@ -1,0 +1,28 @@
+# Realms Size Upgrade Configuration
+# This upgrade allows players to expand their realm border size
+name: "Realms Size"
+description: "Expand the size of your realm borders"
+max-level: 10
+icon: "GRASS_BLOCK"
+prices:
+  1: 100.0
+  2: 250.0
+  3: 500.0
+  4: 1000.0
+  5: 2000.0
+  6: 4000.0
+  7: 8000.0
+  8: 16000.0
+  9: 32000.0
+  10: 64000.0
+effects:
+  1: 150.0
+  2: 200.0
+  3: 250.0
+  4: 300.0
+  5: 400.0
+  6: 500.0
+  7: 600.0
+  8: 700.0
+  9: 800.0
+  10: 1000.0
