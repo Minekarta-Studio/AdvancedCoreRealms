@@ -407,70 +407,8 @@ public class MenuManager {
     }
     
     private void createAndSetElement(Inventory inventory, String elementKey, Player player, String realmName) {
-        FileConfiguration config = getCurrentConfig(elementKey);
-        int slot = config.getInt(getCurrentConfigPath(elementKey) + ".slot", -1);
-        if (slot < 0) return;
-        
-        String material = config.getString(getCurrentConfigPath(elementKey) + ".material");
-        String name = config.getString(getCurrentConfigPath(elementKey) + ".name");
-        name = processPlaceholders(name, player, realmName);
-        name = ColorUtils.processColors(name, player);
-        
-        List<String> lore = null;
-        if (config.isList(getCurrentConfigPath(elementKey) + ".lore")) {
-            List<String> rawLore = config.getStringList(getCurrentConfigPath(elementKey) + ".lore");
-            lore = new ArrayList<>();
-            for (String loreLine : rawLore) {
-                loreLine = processPlaceholders(loreLine, player, realmName);
-                loreLine = ColorUtils.processColors(loreLine, player);
-                lore.add(loreLine);
-            }
-        }
-        
-        // Check permission if required
-        String permissionRequired = config.getString(getCurrentConfigPath(elementKey) + ".permission_required");
-        if (permissionRequired != null && !permissionRequired.isEmpty()) {
-            boolean hasPermission = false;
-            for (String perm : permissionRequired.split(",")) {
-                // Special handling for realm.owner permission
-                if (perm.trim().equals("realm.owner")) {
-                    if (realmName != null) {
-                        com.minekarta.advancedcorerealms.data.object.Realm realm = 
-                            plugin.getWorldDataManager().getRealm(realmName);
-                        if (realm != null && realm.getOwner().equals(player.getUniqueId())) {
-                            hasPermission = true;
-                            break;
-                        }
-                    }
-                } else if (player.hasPermission(perm.trim())) {
-                    hasPermission = true;
-                    break;
-                }
-            }
-            
-            if (!hasPermission) {
-                // Use no_permission versions if available
-                material = config.getString(getCurrentConfigPath(elementKey) + ".no_permission_material", material);
-                String noPermName = config.getString(getCurrentConfigPath(elementKey) + ".no_permission_name", name);
-                noPermName = processPlaceholders(noPermName, player, realmName);
-                name = ColorUtils.processColors(noPermName, player);
-                
-                if (config.isList(getCurrentConfigPath(elementKey) + ".no_permission_lore")) {
-                    List<String> rawNoPermLore = config.getStringList(getCurrentConfigPath(elementKey) + ".no_permission_lore");
-                    lore = new ArrayList<>();
-                    for (String loreLine : rawNoPermLore) {
-                        loreLine = processPlaceholders(loreLine, player, realmName);
-                        loreLine = ColorUtils.processColors(loreLine, player);
-                        lore.add(loreLine);
-                    }
-                }
-            }
-        }
-        
-        if (material != null) {
-            ItemStack item = createItem(Material.getMaterial(material), name, lore);
-            inventory.setItem(slot, item);
-        }
+        // Call the 5-parameter version with a default configName
+        createAndSetElement(inventory, elementKey, player, realmName, "main_menu");
     }
     
     private FileConfiguration getCurrentConfig(String configName) {
@@ -704,8 +642,7 @@ public class MenuManager {
             int playerCount = realm.getBukkitWorld() != null ? realm.getBukkitWorld().getPlayers().size() : 0;
             
             ItemStack realmItem = createItem(worldMaterial, realmName, 
-                "Players: " + playerCount + "
-Status: " + worldStatus);
+                java.util.Arrays.asList("Players: " + playerCount + "\nStatus: " + worldStatus));
             inventory.setItem(slot, realmItem);
             slot++;
         }
@@ -962,9 +899,9 @@ Status: " + worldStatus);
                 
                 ItemStack playerItem;
                 if (isOwner) {
-                    playerItem = createItem(itemMaterial, playerName, "Status: " + status);
+                    playerItem = createItem(itemMaterial, playerName, java.util.Arrays.asList("Status: " + status));
                 } else {
-                    playerItem = createPlayerHead(offlinePlayer, playerName, "Status: " + status);
+                    playerItem = createPlayerHead(offlinePlayer, playerName, java.util.Arrays.asList("Status: " + status));
                 }
                 
                 inventory.setItem(slot, playerItem);
@@ -1005,8 +942,7 @@ Status: " + worldStatus);
     }
     
     public void openRealmCreationMenu(Player player) {
-        String title = processPlaceholders(realmCreationConfig.getString("realm_creation.title"), player, null);
-        title = ColorUtils.processColors(title, player);
+        String title = ColorUtils.processColors(processPlaceholders(realmCreationConfig.getString("realm_creation.title"), player, null), player);
         int size = realmCreationConfig.getInt("realm_creation.size", 27);
         Inventory inventory = Bukkit.createInventory(null, size, title);
         

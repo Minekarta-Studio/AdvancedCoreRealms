@@ -1,10 +1,12 @@
 com\minekarta\advancedcorerealms\worldborder\PlayerToggleBorderEvent.class
 com\minekarta\advancedcorerealms\listeners\InventoryListener.class
+com\minekarta\advancedcorerealms\manager\PlayerStateManager$PlayerState.class
 com\minekarta\advancedcorerealms\upgrades\RealmWarpUpgrade.class
 com\minekarta\advancedcorerealms\utils\MessageUtils.class
 com\minekarta\advancedcorerealms\manager\world\WorldPluginHook.class
 com\minekarta\advancedcorerealms\listeners\PlayerWorldListener.class
 com\minekarta\advancedcorerealms\upgrades\RealmSizeUpgrade.class
+com\minekarta\advancedcorerealms\manager\PlayerStateManager.class
 com\minekarta\advancedcorerealms\upgrades\UpgradeManager.class
 com\minekarta\advancedcorerealms\api\AdvancedCorePlayerImpl.class
 com\minekarta\advancedcorerealms\listeners\PlayerConnectionListener.class
