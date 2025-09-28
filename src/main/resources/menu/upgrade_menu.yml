@@ -1,3 +1,14 @@
-title: "Upgrade Menu"
-size: 27
-items: {}
+upgrade_menu:
+  title: "<#55FF55>Realm Upgrades"
+  size: 54
+  elements:
+    back_button:
+      slot: 49
+      material: "ARROW"
+      name: "<gray>Back to Main Menu"
+      lore: []
+
+    glass_panes:
+      material: "GRAY_STAINED_GLASS_PANE"
+      name: " "
+      fill_remaining: true

@@ -5,8 +5,6 @@ import com.minekarta.advancedcorerealms.data.object.Realm;
 import com.minekarta.advancedcorerealms.menu.Menu;
 import com.minekarta.advancedcorerealms.menu.MenuManager;
 import com.minekarta.advancedcorerealms.upgrades.RealmUpgrade;
-import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -15,13 +13,16 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.Map;
 
 public class UpgradeMenu extends Menu {
 
     private final MenuManager menuManager;
     private final FileConfiguration menuConfig;
+    private final Map<Integer, String> slotActions = new HashMap<>();
+    private final Map<Integer, String> upgradeSlots = new HashMap<>();
 
     public UpgradeMenu(AdvancedCoreRealms plugin, Player player, FileConfiguration menuConfig, MenuManager menuManager) {
         super(plugin, player, menuConfig.getString("upgrade_menu.title", "Upgrades"), menuConfig.getInt("upgrade_menu.size", 54));
@@ -39,7 +40,7 @@ public class UpgradeMenu extends Menu {
             ConfigurationSection itemConfig = elements.getConfigurationSection(key);
             if (itemConfig == null || "glass_panes".equals(key)) continue;
 
-             int itemSlot = itemConfig.getInt("slot", -1);
+            int itemSlot = itemConfig.getInt("slot", -1);
             if (itemSlot == -1) continue;
 
             Material material = Material.matchMaterial(itemConfig.getString("material"));
@@ -47,6 +48,7 @@ public class UpgradeMenu extends Menu {
             String name = itemConfig.getString("name");
             List<String> lore = itemConfig.getStringList("lore");
             inventory.setItem(itemSlot, createGuiItem(material, name, lore.toArray(new String[0])));
+            slotActions.put(itemSlot, key);
         }
 
         // Set dynamic upgrade items
@@ -57,8 +59,12 @@ public class UpgradeMenu extends Menu {
             List<RealmUpgrade> upgrades = new ArrayList<>(plugin.getUpgradeManager().getUpgrades());
             int slot = 10; // Starting slot for upgrades
             for (RealmUpgrade upgrade : upgrades) {
-                if (slot > 43) break; // Don't override bottom bar
+                while (inventory.getItem(slot) != null && slot < 45) { // Avoid overwriting static items
+                    slot++;
+                }
+                if (slot >= 45) break;
                 inventory.setItem(slot, createUpgradeItem(upgrade, playerRealm));
+                upgradeSlots.put(slot, upgrade.getId());
                 slot++;
             }
         }
@@ -79,9 +85,7 @@ public class UpgradeMenu extends Menu {
         double cost = upgrade.getCost(currentLevel);
 
         Material material = Material.matchMaterial(upgrade.getIcon());
-        if (material == null) {
-            material = Material.STONE;
-        }
+        if (material == null) material = Material.STONE;
         String name = "<gold>" + upgrade.getName() + "</gold>";
 
         List<String> lore = new ArrayList<>();
@@ -103,52 +107,50 @@ public class UpgradeMenu extends Menu {
     @Override
     public void handleMenu(InventoryClickEvent e) {
         ItemStack clickedItem = e.getCurrentItem();
-        if (clickedItem == null || clickedItem.getType().isAir() || clickedItem.getItemMeta() == null) return;
+        if (clickedItem == null || clickedItem.getType().isAir()) return;
 
-        String displayName = PlainTextComponentSerializer.plainText().serialize(clickedItem.getItemMeta().displayName());
+        int slot = e.getSlot();
+        String action = slotActions.get(slot);
 
-        if (displayName.equalsIgnoreCase("Back")) {
+        if ("back_button".equals(action)) {
             menuManager.openMainMenu(player);
             return;
         }
 
+        String upgradeId = upgradeSlots.get(slot);
+        if (upgradeId != null) {
+            handleUpgradeClick(upgradeId);
+        }
+    }
+
+    private void handleUpgradeClick(String upgradeId) {
         Realm playerRealm = plugin.getWorldDataManager().getPlayerRealms(player.getUniqueId()).stream().findFirst().orElse(null);
         if (playerRealm == null) {
-            player.sendMessage(ChatColor.RED + "You do not own a realm to upgrade.");
+            plugin.getLanguageManager().sendMessage(player, "error.no_realm_to_upgrade");
             return;
         }
 
-        // Find the upgrade that was clicked
-        RealmUpgrade clickedUpgrade = null;
-        for (RealmUpgrade upgrade : plugin.getUpgradeManager().getUpgrades()) {
-            if (displayName.equalsIgnoreCase(upgrade.getName())) {
-                clickedUpgrade = upgrade;
-                break;
-            }
+        RealmUpgrade clickedUpgrade = plugin.getUpgradeManager().getUpgrade(upgradeId);
+        if (clickedUpgrade == null) return;
+
+        int currentLevel = clickedUpgrade.getLevel(playerRealm);
+        if (currentLevel >= clickedUpgrade.getMaxLevel()) {
+            plugin.getLanguageManager().sendMessage(player, "error.upgrade_max_level");
+            return;
         }
 
-        if (clickedUpgrade != null) {
-            int currentLevel = clickedUpgrade.getLevel(playerRealm);
-            if (currentLevel >= clickedUpgrade.getMaxLevel()) {
-                player.sendMessage(ChatColor.RED + "This upgrade is already at the maximum level.");
-                return;
-            }
+        double cost = clickedUpgrade.getCost(currentLevel);
+        if (!plugin.getUpgradeManager().hasEnoughMoney(player, cost)) {
+            plugin.getLanguageManager().sendMessage(player, "error.not_enough_money", "%cost%", String.format("%,.2f", cost));
+            return;
+        }
 
-            double cost = clickedUpgrade.getCost(currentLevel);
-            if (!plugin.getUpgradeManager().hasEnoughMoney(player, cost)) {
-                player.sendMessage(ChatColor.RED + "You do not have enough money. Cost: $" + String.format("%,.2f", cost));
-                return;
-            }
-
-            // Attempt to purchase
-            boolean success = plugin.getUpgradeManager().upgradeRealm(playerRealm, clickedUpgrade.getId(), player);
-            if (success) {
-                player.sendMessage(ChatColor.GREEN + "Successfully upgraded " + clickedUpgrade.getName() + "!");
-                // Refresh the menu
-                new UpgradeMenu(plugin, player, menuConfig, menuManager).open();
-            } else {
-                player.sendMessage(ChatColor.RED + "There was an error purchasing the upgrade.");
-            }
+        boolean success = plugin.getUpgradeManager().upgradeRealm(playerRealm, clickedUpgrade.getId(), player);
+        if (success) {
+            plugin.getLanguageManager().sendMessage(player, "upgrade.success", "%upgrade%", clickedUpgrade.getName());
+            new UpgradeMenu(plugin, player, menuConfig, menuManager).open(); // Refresh menu
+        } else {
+            plugin.getLanguageManager().sendMessage(player, "error.upgrade_failed");
         }
     }
 }
