@@ -81,6 +81,9 @@ public class DatabaseManager {
 
     /**
      * Asynchronously creates the database tables if they do not already exist.
+     * This method defines the schema for all necessary tables. After ensuring the
+     * tables are created, it calls {@link #updateSchema()} to apply any necessary
+     * migrations for older database versions, such as adding new columns.
      */
     private void createTables() {
         plugin.getServer().getScheduler().runTaskAsynchronously(plugin, () -> {
@@ -99,7 +102,9 @@ public class DatabaseManager {
                         "border_tier_id TEXT DEFAULT 'tier_50'," +
                         "member_slot_tier_id TEXT DEFAULT 'tier_0'," +
                         "border_size INTEGER DEFAULT 100," +
-                        "max_players INTEGER DEFAULT 8" +
+                        "max_players INTEGER DEFAULT 8," +
+                        "border_center_x REAL DEFAULT 0.0," +
+                        "border_center_z REAL DEFAULT 0.0" +
                         ");");
 
                 // Members Table
@@ -120,9 +125,52 @@ public class DatabaseManager {
                         ");");
 
                 plugin.getLogger().info("Database tables created or verified successfully.");
+
+                // Update schema for existing installations
+                updateSchema();
             } catch (SQLException e) {
                 plugin.getLogger().log(Level.SEVERE, "Could not create database tables.", e);
             }
         });
+    }
+
+    /**
+     * Applies non-destructive schema updates to an existing database.
+     * This method is responsible for bringing older database schemas up to date
+     * without losing data. It checks for the existence of new columns before
+     * adding them using `ALTER TABLE`. This ensures that the plugin can be
+     * updated on servers with existing data without requiring manual database
+     * modifications.
+     */
+    private void updateSchema() {
+        try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
+            if (!columnExists(conn, "realms", "border_center_x")) {
+                stmt.execute("ALTER TABLE realms ADD COLUMN border_center_x REAL DEFAULT 0.0;");
+                plugin.getLogger().info("Schema updated: Added border_center_x to realms table.");
+            }
+            if (!columnExists(conn, "realms", "border_center_z")) {
+                stmt.execute("ALTER TABLE realms ADD COLUMN border_center_z REAL DEFAULT 0.0;");
+                plugin.getLogger().info("Schema updated: Added border_center_z to realms table.");
+            }
+        } catch (SQLException e) {
+            plugin.getLogger().log(Level.SEVERE, "Failed to update database schema.", e);
+        }
+    }
+
+    /**
+     * Checks if a specific column exists within a given table using database metadata.
+     * This is a utility method to prevent errors when attempting to add a column
+     * that already exists.
+     *
+     * @param conn       The active database connection to use for metadata lookup.
+     * @param tableName  The name of the table to check.
+     * @param columnName The name of the column to check for.
+     * @return {@code true} if the column exists, {@code false} otherwise.
+     * @throws SQLException if a database access error occurs during the metadata lookup.
+     */
+    private boolean columnExists(Connection conn, String tableName, String columnName) throws SQLException {
+        try (ResultSet rs = conn.getMetaData().getColumns(null, null, tableName, columnName)) {
+            return rs.next();
+        }
     }
 }

@@ -13,6 +13,7 @@ import com.minekarta.advancedcorerealms.storage.InventoryStorage;
 import com.minekarta.advancedcorerealms.storage.YamlInventoryStorage;
 import com.minekarta.advancedcorerealms.transactions.TransactionLogger;
 import com.minekarta.advancedcorerealms.upgrades.UpgradeManager;
+import com.minekarta.advancedcorerealms.worldborder.WorldBorderService;
 import com.minekarta.advancedcorerealms.commands.RealmsCommand;
 import com.minekarta.advancedcorerealms.gui.GUIManager;
 import com.minekarta.advancedcorerealms.listeners.*;
@@ -46,6 +47,7 @@ public class AdvancedCoreRealms extends JavaPlugin {
     private EconomyService economyService;
     private TransactionLogger transactionLogger;
     private DatabaseManager databaseManager;
+    private WorldBorderService worldBorderService;
 
     @Override
     public void onEnable() {
@@ -78,6 +80,7 @@ public class AdvancedCoreRealms extends JavaPlugin {
         this.inventoryStorage = new YamlInventoryStorage(this);
         this.realmInventoryService = new RealmInventoryService(this, this.inventoryStorage);
         this.transactionLogger = new TransactionLogger(this);
+        this.worldBorderService = new WorldBorderService(this);
 
         // Register PlaceholderAPI if it's available
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
@@ -219,6 +222,10 @@ public class AdvancedCoreRealms extends JavaPlugin {
 
     public DatabaseManager getDatabaseManager() {
         return databaseManager;
+    }
+
+    public WorldBorderService getWorldBorderService() {
+        return worldBorderService;
     }
 
     // Cache for AdvancedCorePlayer instances

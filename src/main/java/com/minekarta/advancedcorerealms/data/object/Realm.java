@@ -26,8 +26,10 @@ public class Realm {
     private String worldType;      // The type of world (NORMAL, FLAT, AMPLIFIED, etc.)
     private List<String> transferableItems; // List of items that can be transferred out of the realm
     private int borderSize;        // Size of the world border for this realm (in blocks)
-    private double centerX;        // Center X coordinate of the realm border
-    private double centerZ;        // Center Z coordinate of the realm border
+    /** The X-coordinate of the world border's center. */
+    private double borderCenterX;
+    /** The Z-coordinate of the world border's center. */
+    private double borderCenterZ;
 
     // New upgrade fields
     private String difficulty;
@@ -51,8 +53,8 @@ public class Realm {
         this.worldType = "NORMAL";
         this.transferableItems = new ArrayList<>();
         this.borderSize = 100; // Default border size
-        this.centerX = 0.0;
-        this.centerZ = 0.0;
+        this.borderCenterX = 0.0;
+        this.borderCenterZ = 0.0;
 
         // Initialize new fields
         this.difficulty = "normal"; // Default difficulty
@@ -78,8 +80,8 @@ public class Realm {
         this.worldType = "NORMAL";
         this.transferableItems = new ArrayList<>();
         this.borderSize = 100;
-        this.centerX = 0.0;
-        this.centerZ = 0.0;
+        this.borderCenterX = 0.0;
+        this.borderCenterZ = 0.0;
 
         // Initialize new fields with defaults, will be overwritten by loader
         this.difficulty = "normal";
@@ -242,7 +244,7 @@ public class Realm {
     }
     
     public World getBukkitWorld() {
-        return org.bukkit.Bukkit.getWorld(name);
+        return org.bukkit.Bukkit.getWorld(this.worldName);
     }
     
     public List<String> getTransferableItems() {
@@ -275,28 +277,28 @@ public class Realm {
         this.borderSize = borderSize;
     }
     
-    public double getCenterX() {
-        return centerX;
+    public double getBorderCenterX() {
+        return borderCenterX;
     }
-    
-    public void setCenterX(double centerX) {
-        this.centerX = centerX;
+
+    public void setBorderCenterX(double borderCenterX) {
+        this.borderCenterX = borderCenterX;
     }
-    
-    public double getCenterZ() {
-        return centerZ;
+
+    public double getBorderCenterZ() {
+        return borderCenterZ;
     }
-    
-    public void setCenterZ(double centerZ) {
-        this.centerZ = centerZ;
+
+    public void setBorderCenterZ(double borderCenterZ) {
+        this.borderCenterZ = borderCenterZ;
     }
     
     public void updateCenterFromWorld() {
         World bukkitWorld = getBukkitWorld();
         if (bukkitWorld != null) {
             org.bukkit.Location spawnLocation = bukkitWorld.getSpawnLocation();
-            this.centerX = spawnLocation.getX();
-            this.centerZ = spawnLocation.getZ();
+            this.borderCenterX = spawnLocation.getX();
+            this.borderCenterZ = spawnLocation.getZ();
         }
     }
     

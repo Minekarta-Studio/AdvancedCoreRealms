@@ -127,24 +127,4 @@ public class WorldManager {
         }
     }
 
-    public void updateWorldBorder(Realm realm) {
-        World world = realm.getBukkitWorld();
-        if (world != null) {
-            org.bukkit.WorldBorder border = world.getWorldBorder();
-            border.setCenter(realm.getCenterX(), realm.getCenterZ());
-            border.setSize(realm.getBorderSize());
-        }
-    }
-
-    public void updateWorldDifficulty(Realm realm) {
-        World world = realm.getBukkitWorld();
-        if (world != null) {
-            try {
-                Difficulty difficulty = Difficulty.valueOf(realm.getDifficulty().toUpperCase());
-                world.setDifficulty(difficulty);
-            } catch (IllegalArgumentException e) {
-                plugin.getLogger().warning("Invalid difficulty '" + realm.getDifficulty() + "' set for realm " + realm.getName());
-            }
-        }
-    }
 }
