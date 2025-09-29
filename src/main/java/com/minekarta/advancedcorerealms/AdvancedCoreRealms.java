@@ -66,6 +66,9 @@ public class AdvancedCoreRealms extends JavaPlugin {
         saveDefaultConfig();
         this.realmConfig = new RealmConfig(getConfig());
 
+        // Create default template directory if it doesn't exist
+        createDefaultTemplateDirectory();
+
         this.realmCreator = new RealmCreator(this);
         
         // Initialize storage and services
@@ -127,6 +130,20 @@ public class AdvancedCoreRealms extends JavaPlugin {
             for (File lockFile : lockFiles) {
                 getLogger().warning("  - Orphaned file: " + lockFile.getName());
                 // For safety, we only log and do not delete them automatically in this version.
+            }
+        }
+    }
+
+    private void createDefaultTemplateDirectory() {
+        File templatesFolder = new File(getDataFolder(), realmConfig.getTemplatesFolder());
+        File defaultTemplate = new File(templatesFolder, "default");
+
+        if (!defaultTemplate.exists()) {
+            if (defaultTemplate.mkdirs()) {
+                getLogger().info("Created default template directory at: " + defaultTemplate.getPath());
+                getLogger().info("Please add your default world save to this directory to enable realm creation.");
+            } else {
+                getLogger().severe("Could not create the default template directory. Realm creation may fail.");
             }
         }
     }
