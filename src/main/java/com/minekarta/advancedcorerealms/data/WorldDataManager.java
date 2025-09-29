@@ -2,11 +2,14 @@ package com.minekarta.advancedcorerealms.data;
 
 import com.minekarta.advancedcorerealms.AdvancedCoreRealms;
 import com.minekarta.advancedcorerealms.data.object.Realm;
+import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 
 public class WorldDataManager {
@@ -24,80 +27,75 @@ public class WorldDataManager {
     }
     
     public void loadData() {
-        // Load realms from file
         if (!worldsFile.exists()) {
-            try {
-                worldsFile.createNewFile();
-            } catch (IOException e) {
-                plugin.getLogger().severe("Could not create worlds.yml file: " + e.getMessage());
-                return;
-            }
+            plugin.saveResource("worlds.yml", false);
         }
-        
-        // Load all realm data
-        Set<String> keys = worldsConfig.getKeys(false);
-        for (String realmName : keys) {
-            String ownerStr = worldsConfig.getString(realmName + ".owner");
-            if (ownerStr == null) continue;
-            
-            UUID owner = UUID.fromString(ownerStr);
-            boolean isFlat = worldsConfig.getBoolean(realmName + ".isFlat", true);
-            
-            List<String> memberStrings = worldsConfig.getStringList(realmName + ".members");
-            List<UUID> members = new ArrayList<>();
-            for (String memberStr : memberStrings) {
-                try {
-                    members.add(UUID.fromString(memberStr));
-                } catch (IllegalArgumentException e) {
-                    plugin.getLogger().warning("Invalid UUID in members list for realm: " + realmName);
-                }
-            }
-            
-            List<String> transferableItems = worldsConfig.getStringList(realmName + ".transferable-items");
-            
-            Realm realm = new Realm(realmName, owner, isFlat);
-            realm.setMembers(members);
-            realm.setTransferableItems(transferableItems);
-            realms.put(realmName, realm);
+
+        Set<String> realmIds = worldsConfig.getConfigurationSection("realms").getKeys(false);
+        if (realmIds == null) {
+            plugin.getLogger().info("No realms found in data file.");
+            return;
         }
-        
+
+        for (String realmId : realmIds) {
+            String path = "realms." + realmId;
+            String name = worldsConfig.getString(path + ".name");
+            UUID owner = UUID.fromString(worldsConfig.getString(path + ".owner"));
+            String worldName = worldsConfig.getString(path + ".worldName");
+            String template = worldsConfig.getString(path + ".template");
+            Instant createdAt = Instant.parse(worldsConfig.getString(path + ".createdAt"));
+            boolean isFlat = worldsConfig.getBoolean(path + ".isFlat", false);
+
+            Realm realm = new Realm(name, owner, worldName, template, createdAt, isFlat);
+            realms.put(name, realm);
+        }
         plugin.getLogger().info("Loaded " + realms.size() + " realms from data file.");
     }
     
     public void saveData() {
+        // Clear the existing realms section to ensure deleted realms are removed
+        worldsConfig.set("realms", null);
+
         // Save all realms to file
-        for (Map.Entry<String, Realm> entry : realms.entrySet()) {
-            String realmName = entry.getKey();
-            Realm realm = entry.getValue();
-            
-            worldsConfig.set(realmName + ".owner", realm.getOwner().toString());
-            worldsConfig.set(realmName + ".isFlat", realm.isFlat());
-            
+        for (Realm realm : realms.values()) {
+            String path = "realms." + realm.getName(); // Using name as the key
+            worldsConfig.set(path + ".name", realm.getName());
+            worldsConfig.set(path + ".owner", realm.getOwner().toString());
+            worldsConfig.set(path + ".worldName", realm.getWorldName());
+            worldsConfig.set(path + ".template", realm.getTemplate());
+            worldsConfig.set(path + ".createdAt", realm.getCreatedAt().toString());
+            worldsConfig.set(path + ".isFlat", realm.isFlat());
+
             List<String> memberStrings = new ArrayList<>();
             for (UUID member : realm.getMembers()) {
                 memberStrings.add(member.toString());
             }
-            worldsConfig.set(realmName + ".members", memberStrings);
-            
-            worldsConfig.set(realmName + ".transferable-items", realm.getTransferableItems());
+            worldsConfig.set(path + ".members", memberStrings);
+            worldsConfig.set(path + ".transferable-items", realm.getTransferableItems());
         }
         
         try {
             worldsConfig.save(worldsFile);
-            plugin.getLogger().info("Saved " + realms.size() + " realms to data file.");
         } catch (IOException e) {
             plugin.getLogger().severe("Could not save worlds.yml file: " + e.getMessage());
         }
     }
+
+    public void saveDataAsync() {
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+            saveData();
+            plugin.getLogger().info("Saved " + realms.size() + " realms to data file asynchronously.");
+        });
+    }
     
     public void addRealm(Realm realm) {
         realms.put(realm.getName(), realm);
-        saveData();
+        saveDataAsync();
     }
     
     public void removeRealm(String realmName) {
         realms.remove(realmName);
-        saveData();
+        saveDataAsync();
     }
     
     public Realm getRealm(String realmName) {

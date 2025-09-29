@@ -2,6 +2,8 @@ package com.minekarta.advancedcorerealms;
 
 import com.minekarta.advancedcorerealms.api.AdvancedCorePlayer;
 import com.minekarta.advancedcorerealms.api.AdvancedCorePlayerImpl;
+import com.minekarta.advancedcorerealms.config.RealmConfig;
+import com.minekarta.advancedcorerealms.realm.RealmCreator;
 import com.minekarta.advancedcorerealms.upgrades.UpgradeManager;
 import com.minekarta.advancedcorerealms.commands.RealmsCommand;
 import com.minekarta.advancedcorerealms.data.PlayerDataManager;
@@ -32,6 +34,8 @@ public class AdvancedCoreRealms extends JavaPlugin {
     private GUIManager guiManager;
     private UpgradeManager upgradeManager;
     private PlayerStateManager playerStateManager;
+    private RealmConfig realmConfig;
+    private RealmCreator realmCreator;
     
     @Override
     public void onEnable() {
@@ -47,6 +51,7 @@ public class AdvancedCoreRealms extends JavaPlugin {
         this.guiManager = new GUIManager(this);
         this.upgradeManager = new UpgradeManager(this);
         this.playerStateManager = new PlayerStateManager(this);
+        this.realmCreator = new RealmCreator(this);
         
         // Register PlaceholderAPI if it's available
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
@@ -55,6 +60,7 @@ public class AdvancedCoreRealms extends JavaPlugin {
         
         // Load configuration
         saveDefaultConfig();
+        this.realmConfig = new RealmConfig(getConfig());
         this.languageManager.loadLanguage();
         
         // Load upgrades and initialize economy
@@ -74,7 +80,21 @@ public class AdvancedCoreRealms extends JavaPlugin {
         // Initialize data managers
         this.worldDataManager.loadData();
         
+        // Scan for and log orphaned lock files
+        cleanupOrphanedFiles();
+
         getLogger().info("AdvancedCoreRealms has been enabled!");
+    }
+
+    private void cleanupOrphanedFiles() {
+        File[] lockFiles = getDataFolder().listFiles((dir, name) -> name.startsWith("creating_") && name.endsWith(".lock"));
+        if (lockFiles != null && lockFiles.length > 0) {
+            getLogger().warning("Found " + lockFiles.length + " orphaned creation lock files. This may indicate a server crash during a previous realm creation. Please check for and manually delete any partial realm folders.");
+            for (File lockFile : lockFiles) {
+                getLogger().warning("  - Orphaned file: " + lockFile.getName());
+                // For safety, we only log and do not delete them automatically in this version.
+            }
+        }
     }
     
     @Override
@@ -125,6 +145,14 @@ public class AdvancedCoreRealms extends JavaPlugin {
     
     public PlayerStateManager getPlayerStateManager() {
         return playerStateManager;
+    }
+
+    public RealmConfig getRealmConfig() {
+        return realmConfig;
+    }
+
+    public RealmCreator getRealmCreator() {
+        return realmCreator;
     }
     
     // Cache for AdvancedCorePlayer instances
