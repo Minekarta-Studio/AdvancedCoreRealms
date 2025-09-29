@@ -93,13 +93,13 @@ public class AdvancedCoreRealms extends JavaPlugin {
 
         // Initialize managers
         this.languageManager = new LanguageManager(this);
+        this.realmManager = new RealmManager(this);
         this.worldManager = new WorldManager(this);
         this.inviteManager = new InviteManager(this);
         this.menuManager = new MenuManager(this);
         this.guiManager = new GUIManager(this);
         this.upgradeManager = new UpgradeManager(this);
         this.playerStateManager = new PlayerStateManager(this);
-        this.realmManager = new RealmManager(this);
         this.worldBorderManager = new WorldBorderManager(this);
 
         // Load configuration
