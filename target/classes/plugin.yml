@@ -80,3 +80,12 @@ permissions:
   advancedcorerealms.admin.debug:
     description: Allows use of /realms debug command to test fallback system
     default: op
+  advancedcorerealms.manage:
+    description: Access to the member management GUI.
+    default: false
+  advancedcorerealms.role.transfer:
+    description: Ability to transfer ownership of a realm.
+    default: op
+  advancedcorerealms.build.public:
+    description: Allows building in public realms if enabled.
+    default: false

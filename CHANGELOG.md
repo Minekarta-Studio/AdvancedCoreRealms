@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0-ALPHA] - Unreleased
+
+### Added
+- **Per-Realm Inventories**: Player inventories (main, armor, off-hand, ender chest) are now saved and swapped when entering or leaving a realm.
+  - Inventories are stored in `plugins/AdvancedCoreRealms/inventories/` for easy management and backup.
+  - Includes a temporary cache to prevent data loss on disconnect.
+- **Access Control & Roles**: Implemented a role-based permission system (`OWNER`, `ADMIN`, `MEMBER`, `VISITOR`) to protect realms.
+  - Non-members can no longer build, break, or interact with containers in realm worlds.
+- **Manage Members GUI**: Added a new GUI for realm owners and admins to manage members.
+  - Supports promoting/demoting, kicking, and inviting players.
+  - Added a confirmation screen for transferring realm ownership.
+- New permission nodes: `advancedcorerealms.manage`, `advancedcorerealms.role.transfer`, and `advancedcorerealms.build.public`.
+
+### Changed
+- The `Realm` data object now stores members as a `Map<UUID, Role>` instead of a `List<UUID>`.
+- The main teleportation logic now hooks into the `RealmInventoryService` to trigger inventory swaps.
+- Listeners for block protection and player teleports have been added to enforce the new rules.
+
 ## [1.1.0-ALPHA] - Unreleased
 
 ### Added

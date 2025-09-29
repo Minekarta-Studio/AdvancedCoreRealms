@@ -49,7 +49,8 @@ public class WorldManager {
                 
                 if (world != null) {
                     // Create the realm data object
-                    Realm realm = new Realm(worldName, player.getUniqueId(), worldType.equalsIgnoreCase("FLAT"));
+                    Realm realm = new Realm(worldName, player.getUniqueId(), worldName, worldType);
+                    realm.setFlat(worldType.equalsIgnoreCase("FLAT"));
                     realm.setWorldType(worldType);
                     
                     // Add player to members list to give them access to their own realm
@@ -129,14 +130,24 @@ public class WorldManager {
     }
     
     public void teleportToRealm(Player player, String worldName) {
-        // Check if player has access to the realm
-        if (!hasAccessToRealm(player, worldName)) {
-            player.sendMessage(ChatColor.RED + "You don't have access to this realm!");
+        // Get the realm object from the data manager
+        java.util.Optional<com.minekarta.advancedcorerealms.data.object.Realm> realmOptional = plugin.getWorldDataManager().getRealmByWorldName(worldName);
+
+        if (realmOptional.isEmpty()) {
+            player.sendMessage(ChatColor.RED + "That realm does not exist!");
             return;
         }
         
+        Realm realm = realmOptional.get();
+
+        // Check if the realm exists and if the player has access
+        if (!realm.isMember(player.getUniqueId())) {
+            player.sendMessage(ChatColor.RED + "You don't have access to this realm!");
+            return;
+        }
+
         World world = Bukkit.getWorld(worldName);
-        
+
         if (world == null) {
             // Try to load the world
             world = Bukkit.createWorld(WorldCreator.name(worldName));
@@ -145,28 +156,21 @@ public class WorldManager {
                 return;
             }
         }
-        
+
         // Save player's current location for /realms back command
         plugin.getPlayerDataManager().savePreviousLocation(player.getUniqueId(), player.getLocation());
-        
+
         // Teleport player to the world
         org.bukkit.Location destination = world.getSpawnLocation();
         player.teleport(destination);
         MessageUtils.sendMessage(player, "world.teleport", "%world%", worldName);
+
+        // Call the inventory service AFTER teleporting
+        plugin.getRealmInventoryService().enterRealm(player, realm);
     }
     
     public WorldPluginManager getWorldPluginManager() {
         return worldPluginManager;
-    }
-    
-    private boolean hasAccessToRealm(Player player, String worldName) {
-        Realm realm = plugin.getWorldDataManager().getRealm(worldName);
-        if (realm == null) {
-            return false;
-        }
-        
-        // Owner or member can access
-        return realm.isMember(player.getUniqueId());
     }
     
     private boolean deleteDirectory(java.io.File directory) {
