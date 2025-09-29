@@ -38,8 +38,7 @@ public class PlayerConnectionListener implements Listener {
         // Handle inventory saving on disconnect
         realmInventoryService.handlePlayerDisconnect(event.getPlayer());
 
-        // Save any pending data when player leaves
-        plugin.getWorldDataManager().saveData();
+        // The new system saves data transactionally, so a bulk save here is not needed.
         
         // Clear the player's state in the state manager
         plugin.getPlayerStateManager().clearState(event.getPlayer());

@@ -2,23 +2,27 @@ package com.minekarta.advancedcorerealms.placeholder;
 
 import com.minekarta.advancedcorerealms.AdvancedCoreRealms;
 import com.minekarta.advancedcorerealms.data.object.Realm;
+import com.minekarta.advancedcorerealms.manager.RealmManager;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
+import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Player;
 
-import java.util.List;
+import java.util.Optional;
 
 public class AdvancedCoreRealmsPlaceholder extends PlaceholderExpansion {
 
     private final AdvancedCoreRealms plugin;
+    private final RealmManager realmManager;
 
     public AdvancedCoreRealmsPlaceholder(AdvancedCoreRealms plugin) {
         this.plugin = plugin;
+        this.realmManager = plugin.getRealmManager();
     }
 
     @Override
     public boolean persist() {
-        return true; // This is supposed to be the default, but it's better to return it anyway
+        return true;
     }
 
     @Override
@@ -47,78 +51,43 @@ public class AdvancedCoreRealmsPlaceholder extends PlaceholderExpansion {
             return null;
         }
 
+        // Placeholders requiring a current realm context, using the fast cache
+        Optional<Realm> currentRealmOpt = realmManager.getRealmFromCacheByWorld(player.getWorld().getName());
+
+        if (identifier.startsWith("current_realm_")) {
+            if (currentRealmOpt.isEmpty()) {
+                return "N/A";
+            }
+            Realm currentRealm = currentRealmOpt.get();
+            switch (identifier) {
+                case "current_realm_name":
+                    return currentRealm.getName();
+                case "current_realm_owner":
+                    OfflinePlayer owner = Bukkit.getOfflinePlayer(currentRealm.getOwner());
+                    return owner.getName() != null ? owner.getName() : "Unknown";
+                case "current_realm_player_count":
+                    return currentRealm.getBukkitWorld() != null ? String.valueOf(currentRealm.getBukkitWorld().getPlayers().size()) : "0";
+                case "current_realm_max_players":
+                    return String.valueOf(currentRealm.getMaxPlayers());
+                case "current_realm_type":
+                    return currentRealm.getWorldType();
+                default:
+                    return null;
+            }
+        }
+
+        // --- Disabled Placeholders ---
+        // The following placeholders cannot be supported with the new asynchronous database system
+        // without causing significant performance issues (lag) on the server's main thread.
+        // They require iterating through all realms or all of a player's realms, which is
+        // no longer feasible in a synchronous context like PlaceholderAPI.
+        // We are disabling them to prioritize server performance and stability.
         switch (identifier.toLowerCase()) {
             case "total_realms":
-                return String.valueOf(plugin.getWorldDataManager().getAllRealms().size());
-                
             case "player_realms_count":
-                return String.valueOf(plugin.getWorldDataManager().getPlayerRealms(player.getUniqueId()).size());
-                
             case "player_invited_realms_count":
-                return String.valueOf(plugin.getWorldDataManager().getPlayerInvitedRealms(player.getUniqueId()).size());
-                
             case "player_total_accessible_realms":
-                List<Realm> ownedRealms = plugin.getWorldDataManager().getPlayerRealms(player.getUniqueId());
-                List<Realm> invitedRealms = plugin.getWorldDataManager().getPlayerInvitedRealms(player.getUniqueId());
-                return String.valueOf(ownedRealms.size() + invitedRealms.size());
-                
-            case "player_current_realm":
-                org.bukkit.World currentWorld = player.getWorld();
-                if (plugin.getWorldDataManager().getRealm(currentWorld.getName()) != null) {
-                    return currentWorld.getName();
-                }
-                return "None";
-                
-            case "current_realm_owner":
-                org.bukkit.World currentWorld2 = player.getWorld();
-                Realm currentRealm = plugin.getWorldDataManager().getRealm(currentWorld2.getName());
-                if (currentRealm != null) {
-                    org.bukkit.OfflinePlayer owner = org.bukkit.Bukkit.getOfflinePlayer(currentRealm.getOwner());
-                    return owner.getName() != null ? owner.getName() : "Unknown";
-                }
-                return "N/A";
-                
-            case "current_realm_player_count":
-                org.bukkit.World currentWorld3 = player.getWorld();
-                Realm currentRealm2 = plugin.getWorldDataManager().getRealm(currentWorld3.getName());
-                if (currentRealm2 != null && currentRealm2.getBukkitWorld() != null) {
-                    return String.valueOf(currentRealm2.getBukkitWorld().getPlayers().size());
-                }
-                return "0";
-                
-            case "current_realm_max_players":
-                org.bukkit.World currentWorld4 = player.getWorld();
-                Realm currentRealm3 = plugin.getWorldDataManager().getRealm(currentWorld4.getName());
-                if (currentRealm3 != null) {
-                    return String.valueOf(currentRealm3.getMaxPlayers());
-                }
-                return "8"; // Default max players
-                
-            case "current_realm_type":
-                org.bukkit.World currentWorld5 = player.getWorld();
-                Realm currentRealm4 = plugin.getWorldDataManager().getRealm(currentWorld5.getName());
-                if (currentRealm4 != null) {
-                    return currentRealm4.getWorldType();
-                }
-                return "N/A";
-                
-            default:
-                if (identifier.toLowerCase().startsWith("player_realm_")) {
-                    // Check if it's a realm existence check like "player_realm_{name}_exists"
-                    if (identifier.toLowerCase().endsWith("_exists")) {
-                        String realmName = identifier.toLowerCase().substring(13, identifier.length() - 7); // Remove "player_realm_" and "_exists"
-                        Realm realm = plugin.getWorldDataManager().getRealm(realmName);
-                        if (realm != null) {
-                            // Check if player has access to this realm
-                            if (realm.isMember(player.getUniqueId()) || 
-                                plugin.getWorldDataManager().getPlayerRealms(player.getUniqueId()).contains(realm)) {
-                                return "true";
-                            }
-                        }
-                        return "false";
-                    }
-                }
-                break;
+                return "Unsupported"; // Return a clear indicator that this is no longer supported.
         }
 
         return null; // Placeholder is unknown

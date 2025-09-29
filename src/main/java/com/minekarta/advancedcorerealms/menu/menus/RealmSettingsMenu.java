@@ -2,6 +2,7 @@ package com.minekarta.advancedcorerealms.menu.menus;
 
 import com.minekarta.advancedcorerealms.AdvancedCoreRealms;
 import com.minekarta.advancedcorerealms.data.object.Realm;
+import com.minekarta.advancedcorerealms.manager.RealmManager;
 import com.minekarta.advancedcorerealms.menu.Menu;
 import com.minekarta.advancedcorerealms.menu.MenuManager;
 import org.bukkit.Bukkit;
@@ -20,27 +21,46 @@ import java.util.stream.Collectors;
 
 public class RealmSettingsMenu extends Menu {
 
+    private final AdvancedCoreRealms plugin;
+    private final RealmManager realmManager;
     private final FileConfiguration menuConfig;
     private final MenuManager menuManager;
     private final String realmName;
     private final boolean fromMyRealms;
+    private Realm realm; // Loaded asynchronously
     private final Map<Integer, String> slotActions = new HashMap<>();
 
     public RealmSettingsMenu(AdvancedCoreRealms plugin, Player player, FileConfiguration menuConfig, MenuManager menuManager, String realmName, boolean fromMyRealms) {
         super(plugin, player, menuConfig.getString("realm_settings.title", "Realm Settings").replace("[name]", realmName), menuConfig.getInt("realm_settings.size", 36));
+        this.plugin = plugin;
+        this.realmManager = plugin.getRealmManager();
         this.menuConfig = menuConfig;
         this.menuManager = menuManager;
         this.realmName = realmName;
         this.fromMyRealms = fromMyRealms;
-        setMenuItems();
+        loadAndSetItems();
+    }
+
+    private void loadAndSetItems() {
+        inventory.setItem(13, createGuiItem(Material.CLOCK, "&7Loading settings..."));
+
+        realmManager.getRealmByName(realmName).thenAccept(loadedRealm -> {
+            this.realm = loadedRealm;
+            if (this.realm == null) {
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    player.closeInventory();
+                    plugin.getLanguageManager().sendMessage(player, "error.realm_not_found");
+                });
+                return;
+            }
+            Bukkit.getScheduler().runTask(plugin, this::setMenuItems);
+        });
     }
 
     private void setMenuItems() {
+        inventory.clear();
         ConfigurationSection elements = menuConfig.getConfigurationSection("realm_settings.elements");
         if (elements == null) return;
-
-        Realm realm = plugin.getWorldDataManager().getRealm(realmName);
-        if (realm == null) return;
 
         for (String key : elements.getKeys(false)) {
             ConfigurationSection itemConfig = elements.getConfigurationSection(key);
@@ -50,8 +70,7 @@ public class RealmSettingsMenu extends Menu {
                 if (itemConfig.getBoolean("fill_remaining", false)) {
                     Material material = Material.matchMaterial(itemConfig.getString("material", "BLACK_STAINED_GLASS_PANE"));
                     if (material == null) material = Material.BLACK_STAINED_GLASS_PANE;
-                    String name = itemConfig.getString("name", " ");
-                    fillWith(createGuiItem(material, name));
+                    fillWith(createGuiItem(material, " "));
                 }
                 continue;
             }
@@ -60,9 +79,9 @@ public class RealmSettingsMenu extends Menu {
             Material material = Material.matchMaterial(itemConfig.getString("material"));
             if (material == null) material = Material.STONE;
 
-            String name = itemConfig.getString("name", "").replace("[name]", realmName).replace("[limit]", String.valueOf(realm.getMaxPlayers()));
+            String name = itemConfig.getString("name", "").replace("[name]", realm.getName()).replace("[limit]", String.valueOf(realm.getMaxPlayers()));
             List<String> lore = itemConfig.getStringList("lore").stream()
-                    .map(line -> line.replace("[name]", realmName).replace("[limit]", String.valueOf(realm.getMaxPlayers())))
+                    .map(line -> line.replace("[name]", realm.getName()).replace("[limit]", String.valueOf(realm.getMaxPlayers())))
                     .collect(Collectors.toList());
 
             inventory.setItem(slot, createGuiItem(material, name, lore.toArray(new String[0])));
@@ -72,8 +91,7 @@ public class RealmSettingsMenu extends Menu {
 
     @Override
     public void handleMenu(InventoryClickEvent e) {
-        ItemStack clickedItem = e.getCurrentItem();
-        if (clickedItem == null || clickedItem.getType().isAir()) return;
+        if (realm == null) return; // Menu is still loading
 
         String action = slotActions.get(e.getSlot());
         if (action == null) return;
@@ -92,7 +110,7 @@ public class RealmSettingsMenu extends Menu {
     }
 
     private void handleSetSpawn() {
-        World world = Bukkit.getWorld(realmName);
+        World world = Bukkit.getWorld(realm.getWorldName());
         if (world != null && world.equals(player.getWorld())) {
             world.setSpawnLocation(player.getLocation());
             plugin.getLanguageManager().sendMessage(player, "realm.spawn_set", "%realm%", realmName);
@@ -104,9 +122,6 @@ public class RealmSettingsMenu extends Menu {
     }
 
     private void handlePlayerLimitClick(InventoryClickEvent e) {
-        Realm realm = plugin.getWorldDataManager().getRealm(realmName);
-        if (realm == null) return;
-
         int currentLimit = realm.getMaxPlayers();
         int newLimit = currentLimit;
 
@@ -116,14 +131,16 @@ public class RealmSettingsMenu extends Menu {
             newLimit -= e.isShiftClick() ? 5 : 1;
         }
 
-        newLimit = Math.max(1, Math.min(100, newLimit)); // Clamp between 1 and 100
+        int finalNewLimit = Math.max(1, Math.min(100, newLimit)); // Clamp between 1 and 100
 
-        if (newLimit != currentLimit) {
-            realm.setMaxPlayers(newLimit);
-            plugin.getWorldDataManager().saveData();
-            plugin.getLanguageManager().sendMessage(player, "realm.player_limit_set", "%realm%", realmName, "%limit%", String.valueOf(newLimit));
-            // Re-open the menu to reflect the change
-            new RealmSettingsMenu(plugin, player, menuConfig, menuManager, realmName, fromMyRealms).open();
+        if (finalNewLimit != currentLimit) {
+            realm.setMaxPlayers(finalNewLimit);
+            realmManager.updateRealm(realm).thenRun(() -> {
+                plugin.getLanguageManager().sendMessage(player, "realm.player_limit_set", "%realm%", realmName, "%limit%", String.valueOf(finalNewLimit));
+                Bukkit.getScheduler().runTask(plugin, () ->
+                        new RealmSettingsMenu(plugin, player, menuConfig, menuManager, realmName, fromMyRealms).open()
+                );
+            });
         }
     }
 }

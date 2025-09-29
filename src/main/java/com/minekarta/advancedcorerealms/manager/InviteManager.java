@@ -1,7 +1,7 @@
 package com.minekarta.advancedcorerealms.manager;
 
 import com.minekarta.advancedcorerealms.AdvancedCoreRealms;
-import com.minekarta.advancedcorerealms.data.object.Realm;
+import com.minekarta.advancedcorerealms.realm.Role;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -13,95 +13,81 @@ public class InviteManager {
 
     private final AdvancedCoreRealms plugin;
     private final LanguageManager languageManager;
-    private final Map<UUID, Map<UUID, String>> pendingInvites;
+    private final RealmManager realmManager;
+    private final Map<UUID, String> pendingInvites = new HashMap<>(); // Player UUID -> Realm Name
 
     public InviteManager(AdvancedCoreRealms plugin) {
         this.plugin = plugin;
         this.languageManager = plugin.getLanguageManager();
-        this.pendingInvites = new HashMap<>();
-        
-        // Start a repeating task to clean up expired invites
-        Bukkit.getScheduler().runTaskTimer(plugin, this::cleanupExpiredInvites, 20*60, 20*60); // Every minute
+        this.realmManager = plugin.getRealmManager();
     }
 
     public void sendInvite(Player sender, Player target, String realmName) {
-        Realm realm = plugin.getWorldDataManager().getRealm(realmName);
-        if (realm == null) {
-            languageManager.sendMessage(sender, "error.realm_not_found");
-            return;
-        }
+        realmManager.getRealmByName(realmName).thenAccept(realm -> {
+            if (realm == null) {
+                languageManager.sendMessage(sender, "error.realm_not_found");
+                return;
+            }
 
-        if (!realm.getOwner().equals(sender.getUniqueId())) {
-            languageManager.sendMessage(sender, "error.not-owner");
-            return;
-        }
+            if (!realm.getOwner().equals(sender.getUniqueId())) {
+                languageManager.sendMessage(sender, "error.not-owner");
+                return;
+            }
 
-        pendingInvites.computeIfAbsent(sender.getUniqueId(), k -> new HashMap<>())
-                      .put(target.getUniqueId(), realmName);
+            pendingInvites.put(target.getUniqueId(), realmName);
 
-        languageManager.sendMessage(target, "realm.invite_received", "%player%", sender.getName(), "%realm%", realmName);
-        languageManager.sendMessage(target, "realm.invite_instructions");
-        languageManager.sendMessage(sender, "realm.invite_sent", "%player%", target.getName());
+            languageManager.sendMessage(target, "realm.invite_received", "%player%", sender.getName(), "%realm%", realmName);
+            languageManager.sendMessage(target, "realm.invite_instructions");
+            languageManager.sendMessage(sender, "realm.invite_sent", "%player%", target.getName());
+        });
     }
 
     public void acceptInvite(Player player) {
         UUID playerId = player.getUniqueId();
+        String realmName = pendingInvites.remove(playerId);
 
-        for (Map.Entry<UUID, Map<UUID, String>> outerEntry : pendingInvites.entrySet()) {
-            Map<UUID, String> innerMap = outerEntry.getValue();
-            if (innerMap.containsKey(playerId)) {
-                String realmName = innerMap.get(playerId);
-                Realm realm = plugin.getWorldDataManager().getRealm(realmName);
-                if (realm != null) {
-                    if (!realm.isMember(playerId)) {
-                        realm.addMember(playerId);
-                        plugin.getWorldDataManager().saveData();
-                        languageManager.sendMessage(player, "realm.invite_accepted", "%realm%", realmName);
-                        
-                        innerMap.remove(playerId);
-                        if (innerMap.isEmpty()) {
-                            pendingInvites.remove(outerEntry.getKey());
-                        }
-                        
-                        plugin.getWorldManager().teleportToRealm(player, realmName);
-                        return;
-                    }
-                }
-            }
+        if (realmName == null) {
+            languageManager.sendMessage(player, "error.no_pending_invites");
+            return;
         }
-        languageManager.sendMessage(player, "error.no_pending_invites");
+
+        realmManager.getRealmByName(realmName).thenCompose(realm -> {
+            if (realm == null) {
+                languageManager.sendMessage(player, "error.realm_not_found");
+                return null;
+            }
+
+            if (realm.isMember(playerId)) {
+                // Already a member, just teleport
+                plugin.getWorldManager().teleportToRealm(player, realmName);
+                return null;
+            }
+
+            // Add the player as a member to the local object for the teleport check
+            realm.addMember(playerId, Role.MEMBER);
+
+            // Save the new member to the database, which will also handle cache invalidation
+            return realmManager.addMemberToRealm(realm, playerId, Role.MEMBER);
+
+        }).thenRun(() -> {
+            languageManager.sendMessage(player, "realm.invite_accepted", "%realm%", realmName);
+            plugin.getWorldManager().teleportToRealm(player, realmName);
+        }).exceptionally(ex -> {
+            plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to accept invite for player " + player.getName(), ex);
+            languageManager.sendMessage(player, "error.command_generic");
+            return null;
+        });
     }
 
     public void denyInvite(Player player) {
         UUID playerId = player.getUniqueId();
+        String realmName = pendingInvites.remove(playerId);
 
-        for (Map.Entry<UUID, Map<UUID, String>> outerEntry : pendingInvites.entrySet()) {
-            Map<UUID, String> innerMap = outerEntry.getValue();
-            if (innerMap.containsKey(playerId)) {
-                String realmName = innerMap.get(playerId);
-                languageManager.sendMessage(player, "realm.invite_denied", "%realm%", realmName);
-                
-                innerMap.remove(playerId);
-                if (innerMap.isEmpty()) {
-                    pendingInvites.remove(outerEntry.getKey());
-                }
-                return;
-            }
+        if (realmName == null) {
+            languageManager.sendMessage(player, "error.no_pending_invites");
+            return;
         }
-        languageManager.sendMessage(player, "error.no_pending_invites");
-    }
 
-    private void cleanupExpiredInvites() {
-        // Implementation for expiring invites would go here.
-    }
-
-    public boolean hasPendingInvite(Player player) {
-        UUID playerId = player.getUniqueId();
-        for (Map<UUID, String> invites : pendingInvites.values()) {
-            if (invites.containsKey(playerId)) {
-                return true;
-            }
-        }
-        return false;
+        languageManager.sendMessage(player, "realm.invite_denied", "%realm%", realmName);
     }
 }

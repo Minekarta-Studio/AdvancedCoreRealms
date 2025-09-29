@@ -186,7 +186,7 @@ public class UpgradeManager {
                 plugin.getWorldManager().updateWorldBorder(realm);
 
                 // Persist the changes
-                plugin.getWorldDataManager().saveDataAsync();
+                plugin.getRealmManager().updateRealm(realm);
 
                 // --- Success ---
                 plugin.getLanguageManager().sendMessage(player, "upgrade.success", "%upgrade%", "Border Tier", "%new_value%", String.valueOf(tier.getSize()));
@@ -199,8 +199,7 @@ public class UpgradeManager {
 
             } catch (Exception e) {
                 // --- Failure: Rollback and Refund ---
-                plugin.getLogger().severe("Failed to apply or save border upgrade for realm " + realm.getName() + ". Refunding player " + player.getName());
-                e.printStackTrace();
+                plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to apply or save border upgrade for realm " + realm.getName() + ". Refunding player " + player.getName(), e);
 
                 // Refund player
                 economyService.deposit(player, tier.getPrice());
@@ -245,7 +244,7 @@ public class UpgradeManager {
                 realm.setKeepLoaded(true);
                 // No direct world action needed, but maybe a placeholder for future logic
                 // plugin.getWorldManager().updateKeepLoadedState(realm);
-                plugin.getWorldDataManager().saveDataAsync();
+                plugin.getRealmManager().updateRealm(realm);
 
                 plugin.getLanguageManager().sendMessage(player, "upgrade.success", "%upgrade%", "Keep Loaded", "%new_value%", "Enabled");
                 RealmUpgradedEvent postEvent = new RealmUpgradedEvent(player, realm, "keepLoaded", "false", "true", upgrade.getPrice());
@@ -254,8 +253,7 @@ public class UpgradeManager {
                 plugin.getTransactionLogger().log(realm.getName(), player.getUniqueId(), "keepLoaded", "false", "true", upgrade.getPrice());
 
             } catch (Exception e) {
-                plugin.getLogger().severe("Failed to apply keepLoaded upgrade for realm " + realm.getName() + ". Refunding player.");
-                e.printStackTrace();
+                plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to apply keepLoaded upgrade for realm " + realm.getName() + ". Refunding player.", e);
                 economyService.deposit(player, upgrade.getPrice());
                 realm.setKeepLoaded(false);
                 plugin.getLanguageManager().sendMessage(player, "upgrade.failure-refunded");
@@ -291,7 +289,7 @@ public class UpgradeManager {
             try {
                 realm.setDifficulty(upgrade.getId());
                 plugin.getWorldManager().updateWorldDifficulty(realm);
-                plugin.getWorldDataManager().saveDataAsync();
+                plugin.getRealmManager().updateRealm(realm);
 
                 plugin.getLanguageManager().sendMessage(player, "upgrade.success", "%upgrade%", "Difficulty", "%new_value%", upgrade.getId());
                 RealmUpgradedEvent postEvent = new RealmUpgradedEvent(player, realm, "difficulty", oldDifficulty, upgrade.getId(), upgrade.getPrice());
@@ -300,8 +298,7 @@ public class UpgradeManager {
                 plugin.getTransactionLogger().log(realm.getName(), player.getUniqueId(), "difficulty", oldDifficulty, upgrade.getId(), upgrade.getPrice());
 
             } catch (Exception e) {
-                plugin.getLogger().severe("Failed to apply difficulty upgrade for realm " + realm.getName() + ". Refunding player.");
-                e.printStackTrace();
+                plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to apply difficulty upgrade for realm " + realm.getName() + ". Refunding player.", e);
                 economyService.deposit(player, upgrade.getPrice());
                 realm.setDifficulty(oldDifficulty);
                 plugin.getWorldManager().updateWorldDifficulty(realm);
@@ -341,7 +338,7 @@ public class UpgradeManager {
             try {
                 realm.setMemberSlotTierId(tier.getId());
                 realm.setMaxPlayers(basePlayers + tier.getAdditionalSlots());
-                plugin.getWorldDataManager().saveDataAsync();
+                plugin.getRealmManager().updateRealm(realm);
 
                 plugin.getLanguageManager().sendMessage(player, "upgrade.success", "%upgrade%", "Member Slots", "%new_value%", String.valueOf(realm.getMaxPlayers()));
                 RealmUpgradedEvent postEvent = new RealmUpgradedEvent(player, realm, "members", oldTierId, tier.getId(), tier.getPrice());
@@ -350,8 +347,7 @@ public class UpgradeManager {
                 plugin.getTransactionLogger().log(realm.getName(), player.getUniqueId(), "members", oldTierId, tier.getId(), tier.getPrice());
 
             } catch (Exception e) {
-                plugin.getLogger().severe("Failed to apply member slot upgrade for realm " + realm.getName() + ". Refunding player.");
-                e.printStackTrace();
+                plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to apply member slot upgrade for realm " + realm.getName() + ". Refunding player.", e);
                 economyService.deposit(player, tier.getPrice());
                 realm.setMemberSlotTierId(oldTierId);
                 realm.setMaxPlayers(oldMaxPlayers);

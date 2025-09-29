@@ -2,6 +2,7 @@ package com.minekarta.advancedcorerealms.menu.menus;
 
 import com.minekarta.advancedcorerealms.AdvancedCoreRealms;
 import com.minekarta.advancedcorerealms.data.object.Realm;
+import com.minekarta.advancedcorerealms.manager.RealmManager;
 import com.minekarta.advancedcorerealms.menu.Menu;
 import com.minekarta.advancedcorerealms.menu.MenuManager;
 import com.minekarta.advancedcorerealms.upgrades.UpgradeManager;
@@ -9,6 +10,7 @@ import com.minekarta.advancedcorerealms.upgrades.definitions.BorderTier;
 import com.minekarta.advancedcorerealms.upgrades.definitions.DifficultyUpgrade;
 import com.minekarta.advancedcorerealms.upgrades.definitions.KeepLoadedUpgrade;
 import com.minekarta.advancedcorerealms.upgrades.definitions.MemberSlotTier;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -16,7 +18,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,24 +25,47 @@ import java.util.Optional;
 
 public class UpgradeMenu extends Menu {
 
+    private final AdvancedCoreRealms plugin;
     private final MenuManager menuManager;
     private final FileConfiguration menuConfig;
     private final UpgradeManager upgradeManager;
-    private final Realm realm;
+    private final RealmManager realmManager;
+    private Realm realm; // Will be loaded asynchronously
     private final Map<Integer, Runnable> slotActions = new HashMap<>();
 
     public UpgradeMenu(AdvancedCoreRealms plugin, Player player, FileConfiguration menuConfig, MenuManager menuManager) {
         super(plugin, player, menuConfig.getString("title", "Realm Upgrades"), menuConfig.getInt("size", 54));
+        this.plugin = plugin;
         this.menuManager = menuManager;
         this.menuConfig = menuConfig;
         this.upgradeManager = plugin.getUpgradeManager();
-        this.realm = plugin.getWorldDataManager().getPlayerRealms(player.getUniqueId()).stream().findFirst().orElse(null);
-        setMenuItems();
+        this.realmManager = plugin.getRealmManager();
+        loadAndSetItems();
+    }
+
+    private void loadAndSetItems() {
+        inventory.setItem(22, createGuiItem(Material.CLOCK, "&7Loading realm data..."));
+
+        realmManager.getRealmsByOwner(player.getUniqueId()).thenAccept(realms -> {
+            this.realm = realms.stream().findFirst().orElse(null);
+            Bukkit.getScheduler().runTask(plugin, this::setMenuItems);
+        });
     }
 
     private void setMenuItems() {
+        inventory.clear(); // Clear loading item
         if (realm == null) {
             inventory.setItem(22, createGuiItem(Material.BARRIER, "<red>No Realm Found", "<gray>You must own a realm to purchase upgrades."));
+            // Add a back button even if no realm is found
+            ConfigurationSection backButtonConfig = menuConfig.getConfigurationSection("items.back_button");
+            if (backButtonConfig != null) {
+                int slot = backButtonConfig.getInt("slot");
+                Material material = Material.matchMaterial(backButtonConfig.getString("material"));
+                String name = backButtonConfig.getString("name");
+                List<String> lore = backButtonConfig.getStringList("lore");
+                inventory.setItem(slot, createGuiItem(material, name, lore.toArray(new String[0])));
+                slotActions.put(slot, () -> menuManager.openMainMenu(player));
+            }
             return;
         }
 
@@ -218,6 +242,14 @@ public class UpgradeMenu extends Menu {
     public void handleMenu(InventoryClickEvent e) {
         if (!e.getInventory().equals(inventory)) return;
         e.setCancelled(true);
+
+        if (this.realm == null) {
+            if (slotActions.containsKey(e.getSlot())) {
+                slotActions.get(e.getSlot()).run();
+            }
+            return;
+        }
+
         if (slotActions.containsKey(e.getSlot())) {
             slotActions.get(e.getSlot()).run();
         }

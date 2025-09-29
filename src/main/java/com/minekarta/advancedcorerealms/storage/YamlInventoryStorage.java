@@ -46,8 +46,7 @@ public class YamlInventoryStorage implements InventoryStorage {
             try {
                 config.save(playerFile);
             } catch (IOException e) {
-                plugin.getLogger().severe("Could not save inventory for player " + playerUuid + " in realm " + realmId);
-                e.printStackTrace();
+                plugin.getLogger().log(java.util.logging.Level.SEVERE, "Could not save inventory for player " + playerUuid + " in realm " + realmId, e);
             }
         });
     }

@@ -70,8 +70,7 @@ public class FallbackSystemTester {
         
         future.whenComplete((world, throwable) -> {
             if (throwable != null) {
-                logger.severe("World creation failed with error: " + throwable.getMessage());
-                throwable.printStackTrace();
+                logger.log(java.util.logging.Level.SEVERE, "World creation failed with error: " + throwable.getMessage(), throwable);
                 if (player != null) {
                     player.sendMessage(ChatColor.RED + "Fallback test failed: " + throwable.getMessage());
                 }

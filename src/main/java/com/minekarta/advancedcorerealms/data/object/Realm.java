@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.UUID;
 
 public class Realm {
+    private int id; // Database ID
     private String name;
     private UUID owner;
     private Map<UUID, Role> members;
@@ -86,8 +87,16 @@ public class Realm {
         this.borderTierId = "tier_50";
         this.memberSlotTierId = "tier_0";
     }
-    
+
     // Getters and setters
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
     public String getName() {
         return name;
     }
@@ -232,10 +241,6 @@ public class Realm {
         accessList.remove(playerId);
     }
     
-    /**
-     * Gets the actual Bukkit world object if loaded
-     * @return The loaded World object or null if not currently loaded
-     */
     public World getBukkitWorld() {
         return org.bukkit.Bukkit.getWorld(name);
     }
@@ -286,10 +291,6 @@ public class Realm {
         this.centerZ = centerZ;
     }
     
-    /**
-     * Updates the center coordinates based on the world's spawn location
-     * This should be called when the realm world is first created or loaded
-     */
     public void updateCenterFromWorld() {
         World bukkitWorld = getBukkitWorld();
         if (bukkitWorld != null) {
