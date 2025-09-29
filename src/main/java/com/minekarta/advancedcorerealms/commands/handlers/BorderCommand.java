@@ -4,6 +4,7 @@ import com.minekarta.advancedcorerealms.AdvancedCoreRealms;
 import com.minekarta.advancedcorerealms.commands.base.SubCommand;
 import com.minekarta.advancedcorerealms.data.object.Realm;
 import com.minekarta.advancedcorerealms.manager.LanguageManager;
+import com.minekarta.advancedcorerealms.worldborder.WorldBorderConfig;
 import com.minekarta.advancedcorerealms.worldborder.WorldBorderManager;
 import com.minekarta.advancedcorerealms.worldborder.WorldBorderTier;
 import org.bukkit.Bukkit;
@@ -12,79 +13,65 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * Handles the {@code /realms border} subcommand, allowing administrators to manage
- * the world border of a specific realm.
- * <p>
- * This command currently supports one primary action: {@code upgrade}.
- * <p>
- * <b>Usage:</b> {@code /realms border upgrade <world_name> <tier_id>}
- * <p>
- * This command performs several validation checks:
- * <ul>
- *     <li>Ensures the sender has the required permission ({@code advancedcorerealms.admin.border}).</li>
- *     <li>Verifies that the specified realm and target tier exist.</li>
- *     <li>Prevents setting a realm to the tier it already has.</li>
- * </ul>
- * Upon successful execution, it delegates the border change to the {@link WorldBorderManager}.
- */
-public class BorderCommand extends SubCommand {
+public class BorderCommand implements SubCommand {
 
     private final AdvancedCoreRealms plugin;
     private final LanguageManager lang;
     private final WorldBorderManager worldBorderManager;
+    private final WorldBorderConfig worldBorderConfig;
 
     public BorderCommand(AdvancedCoreRealms plugin) {
-        super("border", "Manages realm world borders.", "/realms border upgrade <world> <tier>", "advancedcorerealms.admin.border", "b");
         this.plugin = plugin;
         this.lang = plugin.getLanguageManager();
         this.worldBorderManager = plugin.getWorldBorderManager();
+        this.worldBorderConfig = plugin.getWorldBorderConfig();
     }
 
-    /**
-     * Executes the border management command.
-     *
-     * @param sender The command sender.
-     * @param args   The arguments provided with the command. Expects: [border, upgrade, world_name, tier_id].
-     */
+    @Override
+    public String getName() {
+        return "border";
+    }
+
+    @Override
+    public String getPermission() {
+        return "advancedcorerealms.admin.border";
+    }
+
     @Override
     public void execute(CommandSender sender, String[] args) {
-        if (args.length < 4 || !args[1].equalsIgnoreCase("upgrade")) {
-            lang.sendMessage(sender, "command.border.usage", s -> s.replace("%usage%", getUsage()));
+        if (args.length < 3 || !args[0].equalsIgnoreCase("upgrade")) {
+            lang.sendMessage(sender, "command.border.usage", "%usage%", "/realms border upgrade <world> <tier>");
             return;
         }
 
-        String worldName = args[2];
-        String targetTierId = args[3];
+        String worldName = args[1];
+        String targetTierId = args[2];
 
         plugin.getRealmManager().getRealmByWorldName(worldName).thenAcceptAsync(realm -> {
             if (realm == null) {
-                lang.sendMessage(sender, "error.realm-not-found", s -> s.replace("%name%", worldName));
+                lang.sendMessage(sender, "error.realm-not-found", "%name%", worldName);
                 return;
             }
 
-            WorldBorderTier targetTier = plugin.getWorldBorderConfig().getTier(targetTierId);
+            WorldBorderTier targetTier = worldBorderConfig.getTier(targetTierId);
             if (targetTier == null) {
-                lang.sendMessage(sender, "command.border.tier-not-found", s -> s.replace("%tier%", targetTierId));
+                lang.sendMessage(sender, "command.border.tier-not-found", "%tier%", targetTierId);
                 return;
             }
 
             if (realm.getBorderTierId().equalsIgnoreCase(targetTierId)) {
-                lang.sendMessage(sender, "command.border.already-on-tier", s -> s.replace("%tier%", targetTierId));
+                lang.sendMessage(sender, "command.border.already-on-tier", "%tier%", targetTierId);
                 return;
             }
 
-            // Execute the upgrade
+            // Execute the upgrade by applying the new tier
             worldBorderManager.setBorderTier(realm, targetTierId);
 
             // Notify the command sender
-            lang.sendMessage(sender, "command.border.upgrade-success", s -> s
-                    .replace("%world%", worldName)
-                    .replace("%tier%", targetTierId));
+            lang.sendMessage(sender, "command.border.upgrade-success", "%world%", worldName, "%tier%", targetTierId);
 
         }).exceptionally(ex -> {
             sender.sendMessage("§cAn unexpected error occurred while fetching the realm.");
@@ -93,30 +80,22 @@ public class BorderCommand extends SubCommand {
         });
     }
 
-    /**
-     * Provides tab completions for the border subcommand.
-     * It suggests "upgrade", world names, and available tier IDs based on the current argument.
-     *
-     * @param sender The command sender.
-     * @param args   The current command arguments.
-     * @return A list of suggested completions.
-     */
     @Override
-    public List<String> onTabComplete(CommandSender sender, String[] args) {
-        if (args.length == 2) {
+    public List<String> onTabComplete(Player player, String[] args) {
+        if (args.length == 1) {
             return List.of("upgrade");
         }
-        if (args.length == 3) {
+        if (args.length == 2) {
             // Suggest world names
             return Bukkit.getWorlds().stream()
                     .map(World::getName)
-                    .filter(name -> name.toLowerCase().startsWith(args[2].toLowerCase()))
+                    .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))
                     .collect(Collectors.toList());
         }
-        if (args.length == 4) {
+        if (args.length == 3) {
             // Suggest available tier IDs
-            return plugin.getWorldBorderConfig().getAllTiers().keySet().stream()
-                    .filter(tierId -> tierId.toLowerCase().startsWith(args[3].toLowerCase()))
+            return worldBorderConfig.getAllTiers().keySet().stream()
+                    .filter(tierId -> tierId.toLowerCase().startsWith(args[2].toLowerCase()))
                     .collect(Collectors.toList());
         }
         return new ArrayList<>();

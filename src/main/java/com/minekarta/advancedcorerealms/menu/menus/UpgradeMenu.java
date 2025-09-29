@@ -6,7 +6,7 @@ import com.minekarta.advancedcorerealms.manager.RealmManager;
 import com.minekarta.advancedcorerealms.menu.Menu;
 import com.minekarta.advancedcorerealms.menu.MenuManager;
 import com.minekarta.advancedcorerealms.upgrades.UpgradeManager;
-import com.minekarta.advancedcorerealms.upgrades.definitions.BorderTier;
+import com.minekarta.advancedcorerealms.worldborder.WorldBorderTier;
 import com.minekarta.advancedcorerealms.upgrades.definitions.DifficultyUpgrade;
 import com.minekarta.advancedcorerealms.upgrades.definitions.KeepLoadedUpgrade;
 import com.minekarta.advancedcorerealms.upgrades.definitions.MemberSlotTier;
@@ -115,10 +115,10 @@ public class UpgradeMenu extends Menu {
     }
 
     private void addBorderUpgradeItem() {
-        Optional<BorderTier> nextTierOpt = upgradeManager.getNextBorderTier(realm);
+        Optional<WorldBorderTier> nextTierOpt = upgradeManager.getNextBorderTier(realm);
         int slot = menuConfig.getInt("special-items.border-upgrade.slot", 20);
         if (nextTierOpt.isPresent()) {
-            BorderTier tier = nextTierOpt.get();
+            WorldBorderTier tier = nextTierOpt.get();
             ItemStack item = createGuiItem(Material.GRASS_BLOCK, "<gold>Upgrade Border",
                     "<gray>Next Tier: <white>" + tier.getSize() + " blocks",
                     "<gray>Cost: <green>" + plugin.getEconomyService().format(tier.getPrice()),

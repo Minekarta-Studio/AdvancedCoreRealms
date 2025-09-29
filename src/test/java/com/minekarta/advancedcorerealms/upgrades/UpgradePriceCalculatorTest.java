@@ -3,7 +3,7 @@ package com.minekarta.advancedcorerealms.upgrades;
 import com.minekarta.advancedcorerealms.AdvancedCoreRealms;
 import com.minekarta.advancedcorerealms.config.RealmConfig;
 import com.minekarta.advancedcorerealms.data.object.Realm;
-import com.minekarta.advancedcorerealms.upgrades.definitions.BorderTier;
+import com.minekarta.advancedcorerealms.worldborder.WorldBorderTier;
 import com.minekarta.advancedcorerealms.upgrades.definitions.MemberSlotTier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -37,10 +37,10 @@ class UpgradePriceCalculatorTest {
     @BeforeEach
     void setUp() {
         // Given: A list of border and member tiers is loaded into the UpgradeManager
-        List<BorderTier> borderTiers = List.of(
-                new BorderTier("tier_50", 50, 0),
-                new BorderTier("tier_100", 100, 5000),
-                new BorderTier("tier_150", 150, 12000)
+        List<WorldBorderTier> borderTiers = List.of(
+                new WorldBorderTier("tier_50", 50, 0, 0, 0, 0, 0, 0),
+                new WorldBorderTier("tier_100", 100, 0, 0, 0, 0, 0, 5000),
+                new WorldBorderTier("tier_150", 150, 0, 0, 0, 0, 0, 12000)
         );
         List<MemberSlotTier> memberSlotTiers = List.of(
                 new MemberSlotTier("tier_0", 0, 0),
@@ -65,7 +65,7 @@ class UpgradePriceCalculatorTest {
         testRealm.setBorderSize(100);
 
         // When: We request the next border tier
-        Optional<BorderTier> nextTier = upgradeManager.getNextBorderTier(testRealm);
+        Optional<WorldBorderTier> nextTier = upgradeManager.getNextBorderTier(testRealm);
 
         // Then: The correct next tier is returned
         assertTrue(nextTier.isPresent(), "Next tier should be present");
@@ -80,7 +80,7 @@ class UpgradePriceCalculatorTest {
         testRealm.setBorderSize(150);
 
         // When: We request the next border tier
-        Optional<BorderTier> nextTier = upgradeManager.getNextBorderTier(testRealm);
+        Optional<WorldBorderTier> nextTier = upgradeManager.getNextBorderTier(testRealm);
 
         // Then: An empty optional is returned
         assertFalse(nextTier.isPresent(), "No next tier should be available");
