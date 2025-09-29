@@ -2,6 +2,7 @@ package com.minekarta.advancedcorerealms.worldborder;
 
 import com.minekarta.advancedcorerealms.AdvancedCoreRealms;
 import com.minekarta.advancedcorerealms.data.object.Realm;
+import com.minekarta.advancedcorerealms.manager.LanguageManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -15,116 +16,117 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
 /**
- * Manages all world border and world-related settings for realms.
- * This service centralizes logic for applying world border dimensions, centers,
- * and game difficulty. It handles cases where worlds are not yet loaded by
- * queueing changes and applying them upon the {@link WorldLoadEvent}, ensuring
- * reliability and preventing main thread lag by using schedulers where appropriate.
+ * Service responsible for all direct interactions with the Bukkit {@link WorldBorder} API.
+ * <p>
+ * This class acts as the final layer in the world border system, taking validated
+ * {@link WorldBorderTier} objects and applying their properties to the game world.
+ * Its key responsibilities include:
+ * <ul>
+ *     <li>Ensuring all Bukkit API calls related to world borders are executed on the main server thread via the scheduler.</li>
+ *     <li>Implementing the smooth, timed transition for border size changes.</li>
+ *     <li>Handling the queuing of border updates for worlds that are not yet loaded.</li>
+ *     <li>Performing safety checks to relocate players who are outside a shrinking border.</li>
+ * </ul>
+ * It listens for {@link WorldLoadEvent} to apply queued updates reliably.
  */
 public class WorldBorderService implements Listener {
 
     private final AdvancedCoreRealms plugin;
-    private final ConcurrentHashMap<String, Realm> pendingBorders = new ConcurrentHashMap<>();
+    private final LanguageManager lang;
+    private final ConcurrentHashMap<String, Realm> pendingRealms = new ConcurrentHashMap<>();
 
-    /**
-     * Constructs the WorldBorderService and registers it as an event listener.
-     *
-     * @param plugin The main plugin instance.
-     */
     public WorldBorderService(AdvancedCoreRealms plugin) {
         this.plugin = plugin;
+        this.lang = plugin.getLanguageManager();
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
     /**
-     * Safely applies the border settings from a {@link Realm} object to its corresponding world.
+     * Safely applies the border settings from a {@link WorldBorderTier} object to a realm's world.
      * <p>
-     * This method is the primary entry point for all world border updates. It checks if the
-     * target world is currently loaded.
-     * <ul>
-     *     <li>If the world is loaded, it applies the border changes immediately.</li>
-     *     <li>If the world is not loaded, it adds the realm's border configuration to a
-     *     pending queue. The changes will be applied later when the world loads, triggered
-     *     by the {@link #onWorldLoad(WorldLoadEvent)} listener.</li>
-     * </ul>
-     * This ensures that border settings are never lost, even if a realm is modified while
-     * its world is inactive.
+     * This is the primary entry point for all world border updates. It determines if the
+     * world is loaded. If so, it applies the changes immediately. If not, it queues
+     * the update to be applied when the world loads via {@link #onWorldLoad(WorldLoadEvent)}.
      *
-     * @param realm The realm object containing the border configuration to apply. Must not be null.
+     * @param realm The realm object containing the world information.
+     * @param tier  The specific border tier configuration to apply.
      */
-    public void applyWorldBorder(Realm realm) {
-        if (realm == null) {
-            plugin.getLogger().warning("Attempted to apply world border for a null realm.");
+    public void applyWorldBorder(Realm realm, WorldBorderTier tier) {
+        if (realm == null || tier == null) {
+            plugin.getLogger().warning("Attempted to apply world border with a null realm or tier.");
             return;
         }
 
         World world = Bukkit.getWorld(realm.getWorldName());
         if (world != null) {
-            // World is loaded, apply immediately
-            plugin.getLogger().info("Applying world border for loaded world: " + realm.getWorldName());
-            updateBorder(world, realm);
+            plugin.getLogger().info("Applying world border tier '" + tier.getId() + "' to loaded world: " + realm.getWorldName());
+            updateBorder(world, tier);
         } else {
-            // World is not loaded, queue for later
             plugin.getLogger().info("World " + realm.getWorldName() + " is not loaded. Queuing border update.");
-            pendingBorders.put(realm.getWorldName(), realm);
+            // We only need the realm to identify the world later. The manager will re-fetch the tier.
+            pendingRealms.put(realm.getWorldName(), realm);
         }
     }
 
-    /**
-     * Event handler that triggers when a world is loaded. It checks if there are any
-     * pending border updates queued for the newly loaded world and applies them.
-     *
-     * @param event The world load event.
-     */
     @EventHandler
     public void onWorldLoad(WorldLoadEvent event) {
         String worldName = event.getWorld().getName();
-        Realm realm = pendingBorders.remove(worldName);
+        Realm realm = pendingRealms.remove(worldName);
         if (realm != null) {
             plugin.getLogger().info("Applying queued world border for newly loaded world: " + worldName);
-            updateBorder(event.getWorld(), realm);
+            // Re-delegate to the manager to ensure the latest tier info is used
+            plugin.getWorldBorderManager().applyBorder(realm);
         }
     }
 
     /**
-     * Core private method that performs the actual border update on a given world.
-     * It sets the border's center and size, with validation and logging for robustness.
-     * It also triggers the player relocation check after a successful update.
+     * Core private method that performs the actual border update on a given world using a tier's properties.
+     * This method handles the smooth transition via {@link WorldBorder#setSize(double, long)}.
      *
      * @param world The world where the border will be updated.
-     * @param realm The realm object containing the new border settings.
+     * @param tier  The tier object containing the new border settings.
      */
-    private void updateBorder(World world, Realm realm) {
-        if (world == null || realm == null) {
-            plugin.getLogger().warning("updateBorder called with null world or realm.");
+    private void updateBorder(World world, WorldBorderTier tier) {
+        if (world == null || tier == null) {
+            plugin.getLogger().warning("updateBorder called with null world or tier.");
             return;
         }
 
-        WorldBorder border = world.getWorldBorder();
+        // All Bukkit API calls should be on the main thread.
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            WorldBorder border = world.getWorldBorder();
 
-        // Validate and set center
-        try {
-            border.setCenter(realm.getBorderCenterX(), realm.getBorderCenterZ());
-        } catch (IllegalArgumentException e) {
-            plugin.getLogger().log(Level.SEVERE, "Invalid border center coordinates for realm " + realm.getName() +
-                    ": (" + realm.getBorderCenterX() + ", " + realm.getBorderCenterZ() + "). Defaulting to spawn location.", e);
-            border.setCenter(world.getSpawnLocation());
-        }
+            // Set properties from the tier
+            border.setCenter(tier.getCenterX(), tier.getCenterZ());
+            border.setWarningDistance(tier.getWarningDistance());
+            border.setWarningTime(tier.getWarningTime());
 
-        // Validate and set size
-        if (realm.getBorderSize() > 0) {
-            border.setSize(realm.getBorderSize());
-        } else {
-            plugin.getLogger().warning("Invalid border size (" + realm.getBorderSize() + ") for realm " + realm.getName() +
-                    ". The border size must be positive. No changes were made to the size.");
-        }
+            // Validate and set size with a smooth transition
+            if (tier.getSize() > 0) {
+                border.setSize(tier.getSize(), tier.getTransitionTime());
+            } else {
+                plugin.getLogger().warning("Invalid border size (" + tier.getSize() + ") for tier " + tier.getId() + ". No size change.");
+            }
 
-        plugin.getLogger().info("Successfully updated border for " + world.getName() +
-                " to size " + border.getSize() + // Log the actual applied size
-                " at (" + border.getCenter().getX() + ", " + border.getCenter().getZ() + ")");
+            plugin.getLogger().info("Successfully applied border tier '" + tier.getId() + "' to " + world.getName() +
+                    ". New size: " + tier.getSize() + " (transitioning over " + tier.getTransitionTime() + "s)");
 
-        // After updating the border, check for any players outside of it
-        checkAndRelocatePlayers(world);
+            // Schedule completion notification and player relocation check to run after the transition
+            long delayTicks = tier.getTransitionTime() * 20L; // Convert seconds to server ticks
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                // Notify players that the transition is complete
+                // These messages can be moved to the language file for full localization.
+                String title = "§aBorder Change Complete";
+                String subtitle = "§7The world border is now " + (int) tier.getSize() + " blocks wide.";
+                for (Player player : world.getPlayers()) {
+                    player.sendTitle(title, subtitle, 10, 70, 20);
+                }
+
+                // Check for any players outside the new border
+                checkAndRelocatePlayers(world);
+
+            }, delayTicks + 20L); // Add 1s buffer
+        });
     }
 
     /**
@@ -170,17 +172,20 @@ public class WorldBorderService implements Listener {
         if (world == null) return;
 
         WorldBorder border = world.getWorldBorder();
-        Location safeLocation = world.getSpawnLocation(); // Define a safe fallback location
+        // Use the border's center as the guaranteed safe location.
+        // We add a small offset to Y to ensure the player doesn't spawn underground.
+        Location safeLocation = border.getCenter().toLocation(world);
+        safeLocation.setY(world.getHighestBlockYAt(safeLocation) + 1.5);
+
 
         for (Player player : world.getPlayers()) {
+            // The check itself can be done on the current thread, but the teleport should be on the main thread.
             if (!border.isInside(player.getLocation())) {
-                // The player is outside the new border, teleport them to safety.
-                // We run this on the next tick to ensure all server processes are stable.
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     player.teleport(safeLocation);
-                    plugin.getLogger().info("Relocated player " + player.getName() + " to a safe location in world " + world.getName() + ".");
-                    // Optionally, send a message to the player
-                    // player.sendMessage("You were moved to a safe location as the world border changed.");
+                    plugin.getLogger().info("Relocated player " + player.getName() + " to the border's center in world " + world.getName() + ".");
+                    // Send a message to the player, assuming the key "world_border.relocated" exists in the lang file.
+                    lang.sendMessage(player, "world_border.relocated");
                 });
             }
         }
