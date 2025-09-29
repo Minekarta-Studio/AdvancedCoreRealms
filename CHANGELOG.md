@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0-ALPHA] - Unreleased
+
+### Added
+- **Economy & Upgrade System (Milestone C)**: Implemented a robust economy and upgrade system for realms.
+  - **Vault Integration**: The plugin now hooks into any Vault-compatible economy plugin to handle transactions. It gracefully disables economy features if Vault is not found.
+  - **Atomic Transactions**: All upgrade purchases are atomic. If any step after payment fails, the player is automatically refunded to prevent data loss.
+  - **`/realms upgrade` GUI**: A new, comprehensive GUI for players to view and purchase upgrades for their realm's border size, member slots, and difficulty. Includes a confirmation step to prevent accidental purchases.
+  - **Configurable Upgrades**: Added a new `upgrades` section to `config.yml` allowing server admins to define tiers and prices for world borders, additional member slots, difficulty changes, and a one-time purchase to keep a realm loaded.
+  - **Transaction Logging**: All successful purchases are logged to `transactions.yml` for auditing purposes.
+  - **Events API**: Added `RealmUpgradeEvent` (cancellable, pre-purchase) and `RealmUpgradedEvent` (post-purchase) to allow other plugins to integrate with the upgrade system.
+- **New Permissions**:
+  - `advancedcorerealms.upgrade`: Allows access to the upgrade command and GUI.
+  - `advancedcorerealms.upgrade.others`: Allows admins to upgrade other players' realms.
+  - `advancedcorerealms.keeploaded`: A special permission to bypass the cost of the `keepLoaded` upgrade.
+
+### Changed
+- The `Realm` data object has been updated to store tier IDs for border and member slots, difficulty, and the `keepLoaded` status.
+- The `WorldDataManager` now saves and loads this new realm metadata.
+- Replaced the old, level-based `UpgradeManager` with a new, tier-based system featuring per-realm locking for transaction safety.
+
 ## [1.2.0-ALPHA] - Unreleased
 
 ### Added

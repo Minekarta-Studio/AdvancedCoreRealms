@@ -5,6 +5,7 @@ import com.minekarta.advancedcorerealms.data.object.Realm;
 import com.minekarta.advancedcorerealms.utils.MessageUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Difficulty;
 import org.bukkit.World;
 import org.bukkit.WorldCreator;
 import org.bukkit.WorldType;
@@ -188,5 +189,26 @@ public class WorldManager {
             return directory.delete();
         }
         return false;
+    }
+
+    public void updateWorldBorder(Realm realm) {
+        World world = realm.getBukkitWorld();
+        if (world != null) {
+            org.bukkit.WorldBorder border = world.getWorldBorder();
+            border.setCenter(realm.getCenterX(), realm.getCenterZ());
+            border.setSize(realm.getBorderSize());
+        }
+    }
+
+    public void updateWorldDifficulty(Realm realm) {
+        World world = realm.getBukkitWorld();
+        if (world != null) {
+            try {
+                Difficulty difficulty = Difficulty.valueOf(realm.getDifficulty().toUpperCase());
+                world.setDifficulty(difficulty);
+            } catch (IllegalArgumentException e) {
+                plugin.getLogger().warning("Invalid difficulty '" + realm.getDifficulty() + "' set for realm " + realm.getName());
+            }
+        }
     }
 }

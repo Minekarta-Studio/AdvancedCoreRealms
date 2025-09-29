@@ -4,9 +4,13 @@ import com.minekarta.advancedcorerealms.api.AdvancedCorePlayer;
 import com.minekarta.advancedcorerealms.api.AdvancedCorePlayerImpl;
 import com.minekarta.advancedcorerealms.config.RealmConfig;
 import com.minekarta.advancedcorerealms.realm.RealmCreator;
+import com.minekarta.advancedcorerealms.economy.EconomyService;
+import com.minekarta.advancedcorerealms.economy.NoopEconomyService;
+import com.minekarta.advancedcorerealms.economy.VaultEconomyService;
 import com.minekarta.advancedcorerealms.realm.RealmInventoryService;
 import com.minekarta.advancedcorerealms.storage.InventoryStorage;
 import com.minekarta.advancedcorerealms.storage.YamlInventoryStorage;
+import com.minekarta.advancedcorerealms.transactions.TransactionLogger;
 import com.minekarta.advancedcorerealms.upgrades.UpgradeManager;
 import com.minekarta.advancedcorerealms.commands.RealmsCommand;
 import com.minekarta.advancedcorerealms.data.PlayerDataManager;
@@ -40,6 +44,8 @@ public class AdvancedCoreRealms extends JavaPlugin {
     private RealmCreator realmCreator;
     private InventoryStorage inventoryStorage;
     private RealmInventoryService realmInventoryService;
+    private EconomyService economyService;
+    private TransactionLogger transactionLogger;
     
     @Override
     public void onEnable() {
@@ -60,6 +66,7 @@ public class AdvancedCoreRealms extends JavaPlugin {
         // Initialize storage and services
         this.inventoryStorage = new YamlInventoryStorage(this);
         this.realmInventoryService = new RealmInventoryService(this, this.inventoryStorage);
+        this.transactionLogger = new TransactionLogger(this);
 
         // Register PlaceholderAPI if it's available
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
@@ -73,7 +80,7 @@ public class AdvancedCoreRealms extends JavaPlugin {
         
         // Load upgrades and initialize economy
         this.upgradeManager.loadUpgrades();
-        this.upgradeManager.initializeEconomy();
+        setupEconomy();
         
         // Register commands
         getCommand("realms").setExecutor(new RealmsCommand(this));
@@ -94,6 +101,21 @@ public class AdvancedCoreRealms extends JavaPlugin {
         cleanupOrphanedFiles();
 
         getLogger().info("AdvancedCoreRealms has been enabled!");
+    }
+
+    private void setupEconomy() {
+        if (getServer().getPluginManager().getPlugin("Vault") != null) {
+            this.economyService = new VaultEconomyService();
+            if (this.economyService.isEnabled()) {
+                getLogger().info("Successfully hooked into Vault for economy services.");
+            } else {
+                getLogger().warning("Vault is installed, but no economy provider was found. Economy features are disabled.");
+                this.economyService = new NoopEconomyService(this);
+            }
+        } else {
+            getLogger().warning("Vault not found. All economy features will be disabled.");
+            this.economyService = new NoopEconomyService(this);
+        }
     }
 
     private void cleanupOrphanedFiles() {
@@ -171,6 +193,14 @@ public class AdvancedCoreRealms extends JavaPlugin {
 
     public RealmInventoryService getRealmInventoryService() {
         return realmInventoryService;
+    }
+
+    public EconomyService getEconomyService() {
+        return economyService;
+    }
+
+    public TransactionLogger getTransactionLogger() {
+        return transactionLogger;
     }
     
     // Cache for AdvancedCorePlayer instances

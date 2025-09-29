@@ -10,3 +10,16 @@ error:
   no-permission: "&cYou do not have permission to use this command."
   world-exists: "&cA realm with that name already exists."
   not-owner: "&cYou are not the owner of this realm."
+
+economy:
+  disabled: "<red>Economy features are currently disabled as no Vault-compatible economy plugin was found."
+  not-enough-funds: "<red>You do not have enough money for this. You need {price}, but you only have {balance}."
+  withdrawal-failed: "<red>Failed to withdraw funds. The transaction has been cancelled."
+
+upgrade:
+  success: "<green>Successfully purchased upgrade <white>{upgrade}</white>! New value: <white>{new_value}</white>."
+  failure: "<red>The upgrade failed for an unknown reason. Please contact an administrator."
+  failure-refunded: "<red>The upgrade failed after payment was taken. You have been automatically refunded."
+  already-owned: "<yellow>You already own this upgrade or a better one."
+  cancelled-by-plugin: "<red>The upgrade was cancelled by another plugin."
+  max-level: "<yellow>You have already reached the maximum level for this upgrade."

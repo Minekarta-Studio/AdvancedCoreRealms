@@ -27,3 +27,40 @@ invite-timeout-seconds: 60 # Time in seconds before an invitation expires
 world-borders: true # Enable/disable world borders globally
 default-world-border: true # Default setting for new players (true/false)
 default-border-color: "BLUE" # Default border color: BLUE, GREEN, RED
+
+# ----------------------------------------------------------------------------------------------------
+# Upgrades Configuration
+#
+# Define the tiers and prices for realm upgrades.
+# ----------------------------------------------------------------------------------------------------
+upgrades:
+  border_tiers:
+    - id: "tier_50"
+      size: 50
+      price: 0
+    - id: "tier_100"
+      size: 100
+      price: 5000
+    - id: "tier_150"
+      size: 150
+      price: 12000
+    - id: "tier_200"
+      size: 200
+      price: 25000
+  difficulty:
+    peaceful: 0
+    easy: 2000
+    normal: 4000
+    hard: 8000
+  member_slots:
+    - id: "tier_0"
+      additional: 0
+      price: 0
+    - id: "tier_5"
+      additional: 5
+      price: 2500
+    - id: "tier_10"
+      additional: 10
+      price: 6000
+  keep_loaded:
+    price_per_day: 100 # Note: The price is for a one-time purchase as per current implementation.
