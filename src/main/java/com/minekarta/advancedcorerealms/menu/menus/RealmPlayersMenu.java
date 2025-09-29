@@ -5,6 +5,7 @@ import com.minekarta.advancedcorerealms.data.object.Realm;
 import com.minekarta.advancedcorerealms.manager.RealmManager;
 import com.minekarta.advancedcorerealms.menu.Menu;
 import com.minekarta.advancedcorerealms.menu.MenuManager;
+import com.minekarta.advancedcorerealms.utils.ColorUtils;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -109,13 +110,13 @@ public class RealmPlayersMenu extends Menu {
         SkullMeta meta = (SkullMeta) head.getItemMeta();
         if (meta == null) return head;
         meta.setOwningPlayer(p);
-        meta.displayName(miniMessage.deserialize("<gold>" + p.getName() + "</gold>"));
+        meta.displayName(ColorUtils.toComponent("<gold>" + p.getName() + "</gold>", player));
         List<Component> lore = new ArrayList<>();
-        lore.add(miniMessage.deserialize(isOwner ? "<gray>Role: <red>Owner" : "<gray>Role: <aqua>Member"));
-        lore.add(miniMessage.deserialize(p.isOnline() ? "<gray>Status: <green>Online" : "<gray>Status: <red>Offline"));
+        lore.add(ColorUtils.toComponent(isOwner ? "<gray>Role: <red>Owner" : "<gray>Role: <aqua>Member", player));
+        lore.add(ColorUtils.toComponent(p.isOnline() ? "<gray>Status: <green>Online" : "<gray>Status: <red>Offline", player));
         if (!isOwner) {
             lore.add(Component.text(""));
-            lore.add(miniMessage.deserialize("<red>Click to kick player"));
+            lore.add(ColorUtils.toComponent("<red>Click to kick player", player));
         }
         meta.lore(lore);
         head.setItemMeta(meta);

@@ -1,12 +1,10 @@
 package com.minekarta.advancedcorerealms.menu;
 
 import com.minekarta.advancedcorerealms.AdvancedCoreRealms;
+import com.minekarta.advancedcorerealms.utils.ColorUtils;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.minimessage.MiniMessage;
-import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
@@ -22,13 +20,11 @@ public abstract class Menu implements InventoryHolder {
     protected final AdvancedCoreRealms plugin;
     protected final Player player;
     protected final Inventory inventory;
-    protected final MiniMessage miniMessage;
 
     public Menu(AdvancedCoreRealms plugin, Player player, String title, int size) {
         this.plugin = plugin;
         this.player = player;
-        this.miniMessage = MiniMessage.builder().tags(TagResolver.standard()).build();
-        Component inventoryTitle = miniMessage.deserialize(title);
+        Component inventoryTitle = ColorUtils.toComponent(title, player);
         this.inventory = Bukkit.createInventory(this, size, inventoryTitle);
     }
 
@@ -49,11 +45,10 @@ public abstract class Menu implements InventoryHolder {
         if (meta == null) {
             return null;
         }
-        Component componentName = miniMessage.deserialize(name);
-        meta.displayName(componentName);
+        meta.displayName(ColorUtils.toComponent(name, player));
         List<Component> loreList = new ArrayList<>();
         for (String line : lore) {
-            loreList.add(miniMessage.deserialize(line));
+            loreList.add(ColorUtils.toComponent(line, player));
         }
         meta.lore(loreList);
         item.setItemMeta(meta);

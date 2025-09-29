@@ -28,10 +28,20 @@ public class ColorUtils {
         sendMessage(player, formattedMessage);
     }
 
+    /**
+     * @deprecated This method is not recommended for use. It returns a serialized string
+     * that loses all MiniMessage formatting. Use {@link #toComponent(String)} instead.
+     */
+    @Deprecated
     public static String processColors(String message) {
         return processColors(message, null);
     }
 
+    /**
+     * @deprecated This method is not recommended for use. It returns a serialized string
+     * that loses all MiniMessage formatting. Use {@link #toComponent(String, Player)} instead.
+     */
+    @Deprecated
     public static String processColors(String message, Player player) {
         if (message == null) {
             return "";
