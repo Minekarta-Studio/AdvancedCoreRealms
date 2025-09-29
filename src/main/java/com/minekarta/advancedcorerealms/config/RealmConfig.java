@@ -8,6 +8,7 @@ public class RealmConfig {
     private final String serverRealmsFolder;
     private final String worldNameFormat;
     private final int defaultBorderSize;
+    private final int baseMaxPlayers;
     private final int sanitizeMaxLength;
     private final String sanitizeAllowedRegex;
 
@@ -16,6 +17,7 @@ public class RealmConfig {
         this.serverRealmsFolder = config.getString("realms.server-realms-folder", "realms");
         this.worldNameFormat = config.getString("realms.world-name-format", "acr_{owner}_{name}_{ts}");
         this.defaultBorderSize = config.getInt("realms.default-border-size", 50);
+        this.baseMaxPlayers = config.getInt("default-max-players", 8);
         this.sanitizeMaxLength = config.getInt("realms.sanitize.max-length", 30);
         this.sanitizeAllowedRegex = config.getString("realms.sanitize.allowed-regex", "[a-z0-9_-]");
     }
@@ -34,6 +36,10 @@ public class RealmConfig {
 
     public int getDefaultBorderSize() {
         return defaultBorderSize;
+    }
+
+    public int getBaseMaxPlayers() {
+        return baseMaxPlayers;
     }
 
     public int getSanitizeMaxLength() {

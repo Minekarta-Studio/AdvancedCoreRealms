@@ -14,6 +14,13 @@
 - **Multi-Language Support**: Comes with pre-built language files (English, Spanish, Indonesian) and is easily expandable.
 - **Developer API**: A simple API to interact with player and realm data for custom integrations.
 
+### Upgrades & Economy (New in Milestone C)
+- **Vault Integration**: Seamlessly hooks into any Vault-compatible economy plugin to allow players to purchase realm upgrades.
+- **Graceful Fallback**: If Vault is not found, economy features are disabled without causing errors, and users are notified.
+- **Configurable Upgrades**: Server owners can define multiple tiers for world borders, member slots, and set prices for difficulty changes or enabling the `keepLoaded` option.
+- **Atomic Transactions**: Purchases are atomic. If an upgrade fails to apply after payment, the player is automatically and instantly refunded, preventing data loss and ensuring fairness.
+- **GUI-Based Upgrades**: Players can manage and purchase upgrades through an intuitive `/realms upgrade` menu.
+
 ## 🚀 Installation
 
 1.  Download the latest version of `AdvancedCoreRealms.jar`.
@@ -126,6 +133,7 @@ main_menu:
 | `/realms accept` | Accepts a pending realm invitation. | `advancedcorerealms.user.accept` |
 | `/realms deny` | Denies a pending realm invitation. | `advancedcorerealms.user.deny` |
 | `/realms back` | Teleports you to your location before your last realm teleport. | `advancedcorerealms.user.back` |
+| `/realms upgrade` | Opens the upgrade menu for your realm. | `advancedcorerealms.upgrade` |
 | `/realms delete <realm>` | Deletes a realm you own. | `advancedcorerealms.user.delete` |
 
 ### Admin Commands
@@ -142,6 +150,8 @@ main_menu:
 - `advancedcorerealms.user.base`: Allows opening the main menu.
 - `advancedcorerealms.user.create`: Allows creating new realms.
 - `advancedcorerealms.limit.realms.<count>`: Sets the maximum number of realms a player can own (e.g., `advancedcorerealms.limit.realms.3`).
+- `advancedcorerealms.upgrade`: Allows players to use the `/realms upgrade` command and GUI.
+- `advancedcorerealms.keeploaded`: A special permission to bypass the cost of the `keepLoaded` upgrade.
 - `advancedcorerealms.donor.create`: (Example) A permission for donors to create realms, can be configured in `main_menu.yml`.
 
 ### Management Permissions
@@ -154,6 +164,7 @@ main_menu:
 - `advancedcorerealms.admin.reload`: Allows reloading the plugin's configuration.
 - `advancedcorerealms.admin.transfer`: Allows transferring realm ownership.
 - `advancedcorerealms.admin.delete`: Allows deleting any player's realm.
+- `advancedcorerealms.upgrade.others`: Allows an admin to upgrade realms owned by other players.
 
 ## PlaceholderAPI Placeholders
 

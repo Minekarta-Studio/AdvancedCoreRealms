@@ -27,7 +27,12 @@ public class Realm {
     private int borderSize;        // Size of the world border for this realm (in blocks)
     private double centerX;        // Center X coordinate of the realm border
     private double centerZ;        // Center Z coordinate of the realm border
-    private java.util.Map<String, Integer> upgradeLevels; // Map of upgrade IDs to their levels
+
+    // New upgrade fields
+    private String difficulty;
+    private boolean keepLoaded;
+    private String borderTierId;
+    private String memberSlotTierId;
 
     public Realm(String name, UUID owner, String worldName, String template) {
         this.name = name;
@@ -47,7 +52,12 @@ public class Realm {
         this.borderSize = 100; // Default border size
         this.centerX = 0.0;
         this.centerZ = 0.0;
-        this.upgradeLevels = new java.util.HashMap<>();
+
+        // Initialize new fields
+        this.difficulty = "normal"; // Default difficulty
+        this.keepLoaded = false;
+        this.borderTierId = "tier_50"; // Default border tier
+        this.memberSlotTierId = "tier_0"; // Default member slot tier
     }
 
     // This constructor is for loading from storage
@@ -69,7 +79,12 @@ public class Realm {
         this.borderSize = 100;
         this.centerX = 0.0;
         this.centerZ = 0.0;
-        this.upgradeLevels = new java.util.HashMap<>();
+
+        // Initialize new fields with defaults, will be overwritten by loader
+        this.difficulty = "normal";
+        this.keepLoaded = false;
+        this.borderTierId = "tier_50";
+        this.memberSlotTierId = "tier_0";
     }
     
     // Getters and setters
@@ -284,25 +299,35 @@ public class Realm {
         }
     }
     
-    public java.util.Map<String, Integer> getUpgradeLevels() {
-        return upgradeLevels;
+    public String getDifficulty() {
+        return difficulty;
     }
-    
-    public void setUpgradeLevels(java.util.Map<String, Integer> upgradeLevels) {
-        this.upgradeLevels = upgradeLevels;
+
+    public void setDifficulty(String difficulty) {
+        this.difficulty = difficulty;
     }
-    
-    public int getUpgradeLevel(String upgradeId) {
-        if (upgradeLevels == null) {
-            upgradeLevels = new java.util.HashMap<>();
-        }
-        return upgradeLevels.getOrDefault(upgradeId, 0);
+
+    public boolean isKeepLoaded() {
+        return keepLoaded;
     }
-    
-    public void setUpgradeLevel(String upgradeId, int level) {
-        if (upgradeLevels == null) {
-            upgradeLevels = new java.util.HashMap<>();
-        }
-        upgradeLevels.put(upgradeId, level);
+
+    public void setKeepLoaded(boolean keepLoaded) {
+        this.keepLoaded = keepLoaded;
+    }
+
+    public String getBorderTierId() {
+        return borderTierId;
+    }
+
+    public void setBorderTierId(String borderTierId) {
+        this.borderTierId = borderTierId;
+    }
+
+    public String getMemberSlotTierId() {
+        return memberSlotTierId;
+    }
+
+    public void setMemberSlotTierId(String memberSlotTierId) {
+        this.memberSlotTierId = memberSlotTierId;
     }
 }

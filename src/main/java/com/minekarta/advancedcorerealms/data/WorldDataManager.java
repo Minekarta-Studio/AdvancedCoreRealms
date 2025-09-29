@@ -48,6 +48,14 @@ public class WorldDataManager {
 
             Realm realm = new Realm(name, owner, worldName, template, createdAt, isFlat);
 
+            // Load new upgrade fields
+            realm.setDifficulty(worldsConfig.getString(path + ".difficulty", "normal"));
+            realm.setKeepLoaded(worldsConfig.getBoolean(path + ".keepLoaded", false));
+            realm.setBorderTierId(worldsConfig.getString(path + ".borderTierId", "tier_50"));
+            realm.setMemberSlotTierId(worldsConfig.getString(path + ".memberSlotTierId", "tier_0"));
+            realm.setBorderSize(worldsConfig.getInt(path + ".borderSize", 100));
+            realm.setMaxPlayers(worldsConfig.getInt(path + ".maxPlayers", 8));
+
             // Load members
             if (worldsConfig.isConfigurationSection(path + ".members")) {
                 for (String memberUuid : worldsConfig.getConfigurationSection(path + ".members").getKeys(false)) {
@@ -78,6 +86,14 @@ public class WorldDataManager {
             worldsConfig.set(path + ".template", realm.getTemplate());
             worldsConfig.set(path + ".createdAt", realm.getCreatedAt().toString());
             worldsConfig.set(path + ".isFlat", realm.isFlat());
+
+            // Save new upgrade fields
+            worldsConfig.set(path + ".difficulty", realm.getDifficulty());
+            worldsConfig.set(path + ".keepLoaded", realm.isKeepLoaded());
+            worldsConfig.set(path + ".borderTierId", realm.getBorderTierId());
+            worldsConfig.set(path + ".memberSlotTierId", realm.getMemberSlotTierId());
+            worldsConfig.set(path + ".borderSize", realm.getBorderSize());
+            worldsConfig.set(path + ".maxPlayers", realm.getMaxPlayers());
 
             // Save members
             for (Map.Entry<UUID, com.minekarta.advancedcorerealms.realm.Role> entry : realm.getMembers().entrySet()) {
