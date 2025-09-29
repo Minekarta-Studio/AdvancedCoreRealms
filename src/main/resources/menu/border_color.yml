@@ -1,31 +1,31 @@
 border_color:
-  title: "<#55FF55>Select Border Color"
+  title: "{#55FF55>AAFFAA}Select Border Color{/#}"
   size: 27
   elements:
     blue_color:
       slot: 11
       material: "BLUE_WOOL"
-      name: "<blue>Blue"
+      name: "{#5555FF>AAAAFF}Blue{/#}"
       lore:
-        - "<gray>Set your realm border to blue."
+        - "{#999999>cccccc}Set your realm border to blue.{/#}"
     green_color:
       slot: 13
       material: "GREEN_WOOL"
-      name: "<green>Green"
+      name: "{#55FF55>AAFFAA}Green{/#}"
       lore:
-        - "<gray>Set your realm border to green."
+        - "{#999999>cccccc}Set your realm border to green.{/#}"
     red_color:
       slot: 15
       material: "RED_WOOL"
-      name: "<red>Red"
+      name: "{#FF5555>FFAAAA}Red{/#}"
       lore:
-        - "<gray>Set your realm border to red."
+        - "{#999999>cccccc}Set your realm border to red.{/#}"
     back:
       slot: 22
       material: "ARROW"
-      name: "<gray>Back"
+      name: "{#ff5555>ff9999}Back{/#}"
       lore:
-        - "<gray>Return to the main menu."
+        - "{#999999>cccccc}Return to the main menu.{/#}"
     glass_panes:
       material: "GRAY_STAINED_GLASS_PANE"
       name: " "
