@@ -59,8 +59,7 @@ public class RealmInventoryService {
                     preSwapCache.remove(playerUUID); // Swap complete
                 });
             }).exceptionally(ex -> {
-                plugin.getLogger().severe("Failed to load inventory for player " + playerUUID + " in realm " + realmUUID);
-                ex.printStackTrace();
+                plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to load inventory for player " + playerUUID + " in realm " + realmUUID, ex);
                 // Restore original inventory on failure
                 Bukkit.getScheduler().runTask(plugin, () -> applySerializedInventory(player, currentInventory));
                 preSwapCache.remove(playerUUID);
@@ -99,8 +98,7 @@ public class RealmInventoryService {
                     playerLocationCache.put(playerUUID, GLOBAL_INVENTORY_ID);
                 });
             }).exceptionally(ex -> {
-                plugin.getLogger().severe("Failed to load global inventory for player " + playerUUID);
-                ex.printStackTrace();
+                plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to load global inventory for player " + playerUUID, ex);
                 // As a fallback, do not clear their realm inventory to prevent data loss.
                 return null;
             });
@@ -167,8 +165,7 @@ public class RealmInventoryService {
             player.getInventory().setItemInOffHand(offhand.length > 0 ? offhand[0] : null);
             player.getEnderChest().setContents(enderChest);
         } catch (IOException | ClassNotFoundException e) {
-            plugin.getLogger().severe("Failed to deserialize and apply inventory for player " + player.getUniqueId());
-            e.printStackTrace();
+            plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to deserialize and apply inventory for player " + player.getUniqueId(), e);
         }
     }
 

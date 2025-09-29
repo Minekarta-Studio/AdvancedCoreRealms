@@ -2,8 +2,10 @@ package com.minekarta.advancedcorerealms.menu.menus;
 
 import com.minekarta.advancedcorerealms.AdvancedCoreRealms;
 import com.minekarta.advancedcorerealms.data.object.Realm;
+import com.minekarta.advancedcorerealms.manager.RealmManager;
 import com.minekarta.advancedcorerealms.menu.Menu;
 import com.minekarta.advancedcorerealms.menu.MenuManager;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -18,22 +20,47 @@ import java.util.stream.Collectors;
 
 public class RealmManagementMenu extends Menu {
 
+    private final AdvancedCoreRealms plugin;
+    private final RealmManager realmManager;
     private final FileConfiguration menuConfig;
     private final MenuManager menuManager;
     private final String realmName;
     private final boolean fromMyRealms;
     private final Map<Integer, String> slotActions = new HashMap<>();
+    private Realm realm; // To hold the loaded realm data
 
     public RealmManagementMenu(AdvancedCoreRealms plugin, Player player, FileConfiguration menuConfig, MenuManager menuManager, String realmName, boolean fromMyRealms) {
         super(plugin, player, menuConfig.getString("realm_management.title", "Realm Management").replace("[name]", realmName), menuConfig.getInt("realm_management.size", 36));
+        this.plugin = plugin;
+        this.realmManager = plugin.getRealmManager();
         this.menuConfig = menuConfig;
         this.menuManager = menuManager;
         this.realmName = realmName;
         this.fromMyRealms = fromMyRealms;
-        setMenuItems();
+        loadAndSetItems();
+    }
+
+    private void loadAndSetItems() {
+        // Set a loading item
+        inventory.setItem(13, createGuiItem(Material.CLOCK, "&7Loading..."));
+
+        realmManager.getRealmByName(realmName).thenAccept(loadedRealm -> {
+            this.realm = loadedRealm;
+            if (this.realm == null) {
+                // If realm not found, close inventory and send message
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    player.closeInventory();
+                    plugin.getLanguageManager().sendMessage(player, "error.realm_not_found");
+                });
+                return;
+            }
+            // Once data is loaded, build the menu on the main thread
+            Bukkit.getScheduler().runTask(plugin, this::setMenuItems);
+        });
     }
 
     private void setMenuItems() {
+        inventory.clear(); // Clear the loading item
         ConfigurationSection elements = menuConfig.getConfigurationSection("realm_management.elements");
         if (elements == null) return;
 
@@ -85,8 +112,8 @@ public class RealmManagementMenu extends Menu {
             return true;
         }
 
-        Realm realm = plugin.getWorldDataManager().getRealm(realmName);
-        boolean isOwner = realm != null && realm.getOwner().equals(player.getUniqueId());
+        // Realm object is now available as a field
+        boolean isOwner = this.realm != null && this.realm.getOwner().equals(player.getUniqueId());
 
         for (String perm : permissions.split(",")) {
             perm = perm.trim();
@@ -103,7 +130,7 @@ public class RealmManagementMenu extends Menu {
     @Override
     public void handleMenu(InventoryClickEvent e) {
         ItemStack clickedItem = e.getCurrentItem();
-        if (clickedItem == null || clickedItem.getType().isAir()) return;
+        if (clickedItem == null || clickedItem.getType().isAir() || this.realm == null) return; // Don't handle clicks while loading
 
         String action = slotActions.get(e.getSlot());
         if (action == null) return;
@@ -114,9 +141,8 @@ public class RealmManagementMenu extends Menu {
                 player.closeInventory();
                 break;
             case "manage_members":
-                plugin.getWorldDataManager().getRealmByWorldName(realmName).ifPresent(realm -> {
-                    menuManager.openManageMembersMenu(player, realm);
-                });
+                // Use the loaded realm object
+                menuManager.openManageMembersMenu(player, this.realm);
                 break;
             case "realm_settings":
                 menuManager.openRealmSettingsMenu(player, realmName, fromMyRealms);

@@ -22,8 +22,7 @@ public class TransactionLogger {
             try {
                 transactionFile.createNewFile();
             } catch (IOException e) {
-                plugin.getLogger().severe("Could not create transactions.yml file!");
-                e.printStackTrace();
+                plugin.getLogger().log(java.util.logging.Level.SEVERE, "Could not create transactions.yml file!", e);
             }
         }
     }
@@ -42,8 +41,7 @@ public class TransactionLogger {
                     config.set("transactions", transactions);
                     config.save(transactionFile);
                 } catch (IOException e) {
-                    plugin.getLogger().severe("Failed to log transaction: " + e.getMessage());
-                    e.printStackTrace();
+                    plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to log transaction: " + e.getMessage(), e);
                 }
             }
         });

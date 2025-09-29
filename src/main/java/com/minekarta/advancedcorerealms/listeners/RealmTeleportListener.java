@@ -1,8 +1,8 @@
 package com.minekarta.advancedcorerealms.listeners;
 
 import com.minekarta.advancedcorerealms.AdvancedCoreRealms;
-import com.minekarta.advancedcorerealms.data.WorldDataManager;
 import com.minekarta.advancedcorerealms.data.object.Realm;
+import com.minekarta.advancedcorerealms.manager.RealmManager;
 import com.minekarta.advancedcorerealms.realm.RealmInventoryService;
 import org.bukkit.World;
 import org.bukkit.event.EventHandler;
@@ -14,11 +14,11 @@ import java.util.Optional;
 public class RealmTeleportListener implements Listener {
 
     private final RealmInventoryService realmInventoryService;
-    private final WorldDataManager worldDataManager;
+    private final RealmManager realmManager;
 
     public RealmTeleportListener(AdvancedCoreRealms plugin) {
         this.realmInventoryService = plugin.getRealmInventoryService();
-        this.worldDataManager = plugin.getWorldDataManager();
+        this.realmManager = plugin.getRealmManager();
     }
 
     @EventHandler
@@ -30,16 +30,24 @@ public class RealmTeleportListener implements Listener {
             return; // No world change, no inventory swap needed
         }
 
-        Optional<Realm> fromRealm = worldDataManager.getRealmByWorldName(fromWorld.getName());
-        Optional<Realm> toRealm = worldDataManager.getRealmByWorldName(toWorld.getName());
+        // Use the fast, synchronous cache lookup
+        Optional<Realm> fromRealm = realmManager.getRealmFromCacheByWorld(fromWorld.getName());
+        Optional<Realm> toRealm = realmManager.getRealmFromCacheByWorld(toWorld.getName());
 
-        // Case 1: Leaving a realm to a non-realm world (or another realm, handled by enterRealm)
+        // Case 1: Leaving a realm to a non-realm world
         if (fromRealm.isPresent() && toRealm.isEmpty()) {
             realmInventoryService.exitRealm(event.getPlayer(), fromRealm.get());
         }
 
-        // enterRealm is handled by the teleport command for controlled teleports.
-        // This listener primarily handles EXITS to ensure inventory is restored
-        // no matter how the player leaves the realm (e.g. /spawn, /home).
+        // Case 2: Entering a realm from a non-realm world (less common, but good to handle)
+        if (fromRealm.isEmpty() && toRealm.isPresent()) {
+             realmInventoryService.enterRealm(event.getPlayer(), toRealm.get());
+        }
+
+        // Case 3: Moving between two different realms
+        if (fromRealm.isPresent() && toRealm.isPresent() && !fromRealm.get().getName().equals(toRealm.get().getName())) {
+            // The `enterRealm` logic handles saving the old inventory and loading the new one.
+            realmInventoryService.enterRealm(event.getPlayer(), toRealm.get());
+        }
     }
 }

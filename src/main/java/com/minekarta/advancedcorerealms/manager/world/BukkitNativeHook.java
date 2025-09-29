@@ -59,8 +59,7 @@ public class BukkitNativeHook implements WorldPluginHook {
                     future.complete(null);
                 }
             } catch (Exception e) {
-                plugin.getLogger().severe("Error creating world with Bukkit native API: " + e.getMessage());
-                e.printStackTrace();
+                plugin.getLogger().log(java.util.logging.Level.SEVERE, "Error creating world with Bukkit native API: " + e.getMessage(), e);
                 future.completeExceptionally(e);
             }
         });

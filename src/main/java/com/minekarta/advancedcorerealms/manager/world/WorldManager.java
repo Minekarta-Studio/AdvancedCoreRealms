@@ -2,193 +2,129 @@ package com.minekarta.advancedcorerealms.manager.world;
 
 import com.minekarta.advancedcorerealms.AdvancedCoreRealms;
 import com.minekarta.advancedcorerealms.data.object.Realm;
-import com.minekarta.advancedcorerealms.utils.MessageUtils;
+import com.minekarta.advancedcorerealms.manager.LanguageManager;
+import com.minekarta.advancedcorerealms.manager.RealmManager;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Difficulty;
 import org.bukkit.World;
 import org.bukkit.WorldCreator;
-import org.bukkit.WorldType;
 import org.bukkit.entity.Player;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
+import java.util.logging.Level;
 
-/**
- * Enhanced WorldManager that uses the modular WorldPluginManager for world creation
- * This replaces the original WorldManager to support the new architecture
- */
 public class WorldManager {
-    
+
     private final AdvancedCoreRealms plugin;
     private final WorldPluginManager worldPluginManager;
-    
+    private final RealmManager realmManager;
+    private final LanguageManager languageManager;
+
     public WorldManager(AdvancedCoreRealms plugin) {
         this.plugin = plugin;
         this.worldPluginManager = new WorldPluginManager(plugin);
+        this.realmManager = plugin.getRealmManager();
+        this.languageManager = plugin.getLanguageManager();
     }
-    
-    public void createWorldAsync(Player player, String worldName, String worldType) {
-        // Run world creation asynchronously to avoid blocking the main thread
-        CompletableFuture.runAsync(() -> {
+
+    /**
+     * Asynchronously deletes a realm, including teleporting players, unloading the world,
+     * deleting world files, and removing the database entry.
+     *
+     * @param realm The realm to be deleted.
+     * @return A CompletableFuture that completes with true if successful, false otherwise.
+     */
+    public CompletableFuture<Boolean> deleteWorld(Realm realm) {
+        return CompletableFuture.supplyAsync(() -> {
+            // Step 1: Unload the world (must run on main thread)
             try {
-                WorldCreator creator = WorldCreator.name(worldName);
-                
-                // Set world type based on input
-                if (worldType.equalsIgnoreCase("FLAT")) {
-                    creator.type(WorldType.FLAT);
-                } else if (worldType.equalsIgnoreCase("NORMAL")) {
-                    creator.type(WorldType.NORMAL);
-                } else if (worldType.equalsIgnoreCase("AMPLIFIED")) {
-                    creator.type(WorldType.AMPLIFIED);
-                } else {
-                    // Default to normal
-                    creator.type(WorldType.NORMAL);
-                }
-                
-                // Use the WorldPluginManager to create the world with fallback system
-                World world = worldPluginManager.createWorldAsync(worldName, creator, player).join();
-                
-                if (world != null) {
-                    // Create the realm data object
-                    Realm realm = new Realm(worldName, player.getUniqueId(), worldName, worldType);
-                    realm.setFlat(worldType.equalsIgnoreCase("FLAT"));
-                    realm.setWorldType(worldType);
-                    
-                    // Add player to members list to give them access to their own realm
-                    realm.addMember(player.getUniqueId());
-                    
-                    // Set world properties based on the type
-                    if (worldType.equalsIgnoreCase("FLAT")) {
-                        realm.setCreativeMode(false); // Flat worlds default to survival
-                        realm.setPeacefulMode(false);
-                    } else if (worldType.equalsIgnoreCase("AMPLIFIED")) {
-                        realm.setCreativeMode(true); // Amplified often used for creative builds
-                        realm.setPeacefulMode(false);
-                    } else {
-                        realm.setCreativeMode(false); // Normal worlds default to survival
-                        realm.setPeacefulMode(false);
+                return Bukkit.getScheduler().callSyncMethod(plugin, () -> {
+                    World world = Bukkit.getWorld(realm.getWorldName());
+                    if (world != null) {
+                        world.getPlayers().forEach(p -> {
+                            p.teleport(Bukkit.getWorlds().get(0).getSpawnLocation());
+                            languageManager.sendMessage(p, "realm.world_deleted_kick", "%world%", realm.getName());
+                        });
+                        return Bukkit.unloadWorld(world, true);
                     }
-                    
-                    // Set the default max players limit
-                    realm.setMaxPlayers(plugin.getConfig().getInt("default-max-players", 8));
-                    
-                    // Add the realm to the data manager
-                    plugin.getWorldDataManager().addRealm(realm);
-                    
-                    // Save the world data
-                    plugin.getWorldDataManager().saveData();
-                    
-                    // Teleport the player to the new world (back on main thread)
-                    Bukkit.getScheduler().runTask(plugin, () -> {
-                        teleportToRealm(player, worldName);
-                        player.sendMessage(ChatColor.GREEN + "Realms successfully created! Enjoy your home sweat home...");
-                    });
-                } else {
-                    Bukkit.getScheduler().runTask(plugin, () -> {
-                        player.sendMessage(ChatColor.RED + "Failed to create world: " + worldName + 
-                                         " - All creation methods exhausted");
-                    });
-                }
+                    return true; // World wasn't loaded, so it's "successfully" unloaded
+                }).get();
             } catch (Exception e) {
-                Bukkit.getScheduler().runTask(plugin, () -> {
-                    player.sendMessage(ChatColor.RED + "Error creating world: " + e.getMessage());
-                    plugin.getLogger().severe("Error creating world: " + e.getMessage());
-                    e.printStackTrace();
-                });
+                plugin.getLogger().log(Level.SEVERE, "Exception while unloading world " + realm.getWorldName(), e);
+                return false;
             }
+        }).thenComposeAsync(unloaded -> {
+            if (!unloaded) {
+                return CompletableFuture.completedFuture(false);
+            }
+
+            // Step 2: Delete world files (async)
+            try {
+                File worldFolder = new File(Bukkit.getWorldContainer(), realm.getWorldName());
+                if (worldFolder.exists()) {
+                    deleteDirectory(worldFolder);
+                }
+            } catch (IOException e) {
+                plugin.getLogger().log(Level.SEVERE, "Failed to delete world folder: " + realm.getWorldName(), e);
+                return CompletableFuture.completedFuture(false);
+            }
+
+            // Step 3: Delete database record (async)
+            return realmManager.deleteRealm(realm.getName()).thenApply(v -> true);
         });
     }
-    
-    public void deleteWorld(Player player, String worldName) {
-        World world = Bukkit.getWorld(worldName);
-        
-        if (world != null) {
-            // Teleport all players out of the world first
-            for (Player worldPlayer : world.getPlayers()) {
-                // Teleport to spawn or to the player's last known location in main world
-                org.bukkit.Location mainWorldSpawn = Bukkit.getWorlds().get(0).getSpawnLocation();
-                worldPlayer.teleport(mainWorldSpawn);
-                worldPlayer.sendMessage(ChatColor.RED + "The realm you were in has been deleted!");
-            }
-            
-            // Unload the world
-            boolean unloaded = Bukkit.unloadWorld(world, true);
-            if (!unloaded) {
-                player.sendMessage(ChatColor.RED + "Failed to unload world before deletion");
-                return;
-            }
-        }
-        
-        // Delete the world folder from disk
-        java.io.File worldFolder = new java.io.File(Bukkit.getWorldContainer(), worldName);
-        if (worldFolder.exists() && worldFolder.isDirectory()) {
-            deleteDirectory(worldFolder);
-        }
-        
-        // Remove from data
-        plugin.getWorldDataManager().removeRealm(worldName);
-        MessageUtils.sendMessage(player, "world.deleted", "%world%", worldName);
-    }
-    
+
+
     public void teleportToRealm(Player player, String worldName) {
-        // Get the realm object from the data manager
-        java.util.Optional<com.minekarta.advancedcorerealms.data.object.Realm> realmOptional = plugin.getWorldDataManager().getRealmByWorldName(worldName);
-
-        if (realmOptional.isEmpty()) {
-            player.sendMessage(ChatColor.RED + "That realm does not exist!");
-            return;
-        }
-        
-        Realm realm = realmOptional.get();
-
-        // Check if the realm exists and if the player has access
-        if (!realm.isMember(player.getUniqueId())) {
-            player.sendMessage(ChatColor.RED + "You don't have access to this realm!");
-            return;
-        }
-
-        World world = Bukkit.getWorld(worldName);
-
-        if (world == null) {
-            // Try to load the world
-            world = Bukkit.createWorld(WorldCreator.name(worldName));
-            if (world == null) {
-                player.sendMessage(ChatColor.RED + "Could not load the realm: " + worldName);
+        realmManager.getRealmByWorldName(worldName).thenAccept(realm -> {
+            if (realm == null) {
+                languageManager.sendMessage(player, "error.realm_not_found");
                 return;
             }
-        }
 
-        // Save player's current location for /realms back command
-        plugin.getPlayerDataManager().savePreviousLocation(player.getUniqueId(), player.getLocation());
+            if (!realm.isMember(player.getUniqueId()) && !player.hasPermission("advancedcorerealms.admin.teleport.any")) {
+                languageManager.sendMessage(player, "error.no_access_to_realm");
+                return;
+            }
 
-        // Teleport player to the world
-        org.bukkit.Location destination = world.getSpawnLocation();
-        player.teleport(destination);
-        MessageUtils.sendMessage(player, "world.teleport", "%world%", worldName);
+            Bukkit.getScheduler().runTask(plugin, () -> {
+                World world = Bukkit.getWorld(worldName);
+                if (world == null) {
+                    languageManager.sendMessage(player, "world.loading", "%world%", worldName);
+                    world = Bukkit.createWorld(new WorldCreator(worldName));
+                    if (world == null) {
+                        languageManager.sendMessage(player, "error.world_load_failed", "%world%", worldName);
+                        return;
+                    }
+                }
 
-        // Call the inventory service AFTER teleporting
-        plugin.getRealmInventoryService().enterRealm(player, realm);
+                realmManager.savePreviousLocation(player.getUniqueId(), player.getLocation());
+                player.teleport(world.getSpawnLocation());
+                languageManager.sendMessage(player, "world.teleport", "%world%", worldName);
+                plugin.getRealmInventoryService().enterRealm(player, realm);
+            });
+        });
     }
-    
+
     public WorldPluginManager getWorldPluginManager() {
         return worldPluginManager;
     }
-    
-    private boolean deleteDirectory(java.io.File directory) {
-        if (directory.exists()) {
-            java.io.File[] files = directory.listFiles();
+
+    private void deleteDirectory(File directory) throws IOException {
+        if (!directory.exists()) return;
+        if (directory.isDirectory()) {
+            File[] files = directory.listFiles();
             if (files != null) {
-                for (java.io.File file : files) {
-                    if (file.isDirectory()) {
-                        deleteDirectory(file);
-                    } else {
-                        file.delete();
-                    }
+                for (File file : files) {
+                    deleteDirectory(file);
                 }
             }
-            return directory.delete();
         }
-        return false;
+        if (!directory.delete()) {
+            throw new IOException("Failed to delete " + directory);
+        }
     }
 
     public void updateWorldBorder(Realm realm) {
