@@ -2,6 +2,7 @@ package com.minekarta.advancedcorerealms.data.object;
 
 import org.bukkit.World;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -12,7 +13,9 @@ public class Realm {
     private List<UUID> members;
     private List<UUID> accessList;  // Additional access permissions beyond members
     private boolean isFlat;
-    private long creationTime;
+    private Instant createdAt;
+    private String worldName;
+    private String template;
     private int maxPlayers;        // Max players allowed in the world
     private boolean isCreativeMode; // Whether the world is in creative or survival
     private boolean isPeacefulMode; // Whether the world is in peaceful mode
@@ -22,24 +25,46 @@ public class Realm {
     private double centerX;        // Center X coordinate of the realm border
     private double centerZ;        // Center Z coordinate of the realm border
     private java.util.Map<String, Integer> upgradeLevels; // Map of upgrade IDs to their levels
-    
-    public Realm(String name, UUID owner, boolean isFlat) {
+
+    public Realm(String name, UUID owner, String worldName, String template) {
         this.name = name;
         this.owner = owner;
+        this.worldName = worldName;
+        this.template = template;
         this.members = new ArrayList<>();
         this.accessList = new ArrayList<>();
-        this.isFlat = isFlat;
-        this.creationTime = System.currentTimeMillis();
+        this.isFlat = false; // This can be configured per-template later
+        this.createdAt = Instant.now();
         this.maxPlayers = 8; // Default max players
         this.isCreativeMode = false; // Default to survival
         this.isPeacefulMode = false; // Default to normal mob spawning
-        this.worldType = isFlat ? "FLAT" : "NORMAL";
-        this.transferableItems = new ArrayList<>(); // Default to no transferable items
+        this.worldType = "NORMAL";
+        this.transferableItems = new ArrayList<>();
         this.borderSize = 100; // Default border size
-        // Initialize center coordinates to 0,0 (will be updated when world is created/loaded)
         this.centerX = 0.0;
         this.centerZ = 0.0;
-        this.upgradeLevels = new java.util.HashMap<>(); // Initialize upgrade levels
+        this.upgradeLevels = new java.util.HashMap<>();
+    }
+
+    // This constructor is for loading from storage
+    public Realm(String name, UUID owner, String worldName, String template, Instant createdAt, boolean isFlat) {
+        this.name = name;
+        this.owner = owner;
+        this.worldName = worldName;
+        this.template = template;
+        this.createdAt = createdAt;
+        this.isFlat = isFlat;
+        this.members = new ArrayList<>();
+        this.accessList = new ArrayList<>();
+        this.maxPlayers = 8;
+        this.isCreativeMode = false;
+        this.isPeacefulMode = false;
+        this.worldType = "NORMAL";
+        this.transferableItems = new ArrayList<>();
+        this.borderSize = 100;
+        this.centerX = 0.0;
+        this.centerZ = 0.0;
+        this.upgradeLevels = new java.util.HashMap<>();
     }
     
     // Getters and setters
@@ -82,9 +107,25 @@ public class Realm {
     public void setFlat(boolean flat) {
         isFlat = flat;
     }
-    
-    public long getCreationTime() {
-        return creationTime;
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public String getWorldName() {
+        return worldName;
+    }
+
+    public void setWorldName(String worldName) {
+        this.worldName = worldName;
+    }
+
+    public String getTemplate() {
+        return template;
+    }
+
+    public void setTemplate(String template) {
+        this.template = template;
     }
     
     public int getMaxPlayers() {

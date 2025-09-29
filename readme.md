@@ -28,6 +28,37 @@ All configuration is located in the `plugins/AdvancedCoreRealms/` directory.
 -   `config.yml`: Main plugin configuration.
 -   `languages/`: Contains language files (`en.yml`, `es.yml`, etc.).
 -   `menu/`: Contains all GUI menu configuration files.
+-   `templates/`: Contains world templates for realm creation.
+
+### Foldered World Creation (Milestone A)
+
+AdvancedCoreRealms now creates each realm as a separate world folder on the server, providing better isolation and stability. This process is asynchronous to prevent server lag.
+
+**How it Works:**
+1. When a player runs `/realms create <name> <template>`, the plugin finds the corresponding template in the `plugins/AdvancedCoreRealms/templates/` folder.
+2. It asynchronously copies this template to a new folder under the server's `realms/` directory (this is configurable).
+3. The new world is then loaded, configured, and the player is teleported to it.
+4. If anything goes wrong, the system automatically cleans up any partial files to prevent clutter.
+
+**Configuration (`config.yml`):**
+```yaml
+realms:
+  templates-folder: "templates"
+  server-realms-folder: "realms"   # An empty string "" will create worlds in the server root.
+  world-name-format: "acr_{owner}_{name}_{ts}"
+  default-border-size: 50
+  sanitize:
+    max-length: 30
+    allowed-regex: "[a-z0-9_-]"
+```
+
+**Creating Templates:**
+- Create a new folder inside `plugins/AdvancedCoreRealms/templates/`. The name of this folder is the template name (e.g., `vanilla`, `skyblock`).
+- Copy a complete world save into this folder (including `level.dat`, `region/`, `data/`, etc.).
+- Players can then create realms using this template: `/realms create MyNewRealm vanilla`.
+
+**Note for Server Hosters (Pterodactyl, etc.):**
+Some hosting panels may have restrictions on file system access. If the plugin fails to create worlds in a subfolder, you can set `server-realms-folder: ""` in `config.yml`. This will create the realm folders directly in the server's root directory, which is usually permitted.
 
 ### Customizing Menus
 
@@ -67,7 +98,7 @@ main_menu:
 | Command | Description | Permission |
 | --- | --- | --- |
 | `/realms` | Opens the main realms menu. | `advancedcorerealms.user.base` |
-| `/realms create <name> [type]` | Creates a new realm. | `advancedcorerealms.user.create` |
+| `/realms create <name> [template]` | Creates a new realm from a template. | `advancedcorerealms.user.create` |
 | `/realms list` | Lists all your owned and invited realms. | `advancedcorerealms.user.list` |
 | `/realms tp <realm>` | Teleports you to a realm you own or are invited to. | `advancedcorerealms.user.teleport` |
 | `/realms invite <realm> <player>` | Invites a player to your realm. | `advancedcorerealms.user.invite` |

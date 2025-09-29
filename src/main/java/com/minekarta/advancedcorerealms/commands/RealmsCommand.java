@@ -118,9 +118,9 @@ public class RealmsCommand implements CommandExecutor, TabCompleter {
             return;
         }
 
-        String worldName = args[1];
+        String realmName = args[1];
 
-        if (Bukkit.getWorld(worldName) != null || plugin.getWorldDataManager().getRealm(worldName) != null) {
+        if (plugin.getWorldDataManager().getRealm(realmName) != null) {
             languageManager.sendMessage(player, "error.world-exists");
             return;
         }
@@ -134,20 +134,14 @@ public class RealmsCommand implements CommandExecutor, TabCompleter {
             return;
         }
 
-        String worldType = plugin.getConfig().getString("default-world-type", "FLAT").toUpperCase();
+        // The template type is the second argument (optional), defaults to "default"
+        String templateType = "default";
         if (args.length >= 3) {
-            String type = args[2].toUpperCase();
-            if (Arrays.asList("FLAT", "NORMAL", "AMPLIFIED").contains(type)) {
-                worldType = type;
-            } else {
-                languageManager.sendMessage(player, "error.invalid_world_type");
-                return;
-            }
+            templateType = args[2];
         }
 
         plugin.getPlayerDataManager().savePreviousLocation(player.getUniqueId(), player.getLocation());
-        languageManager.sendMessage(player, "realm.creation_started");
-        worldManager.createWorldAsync(player, worldName, worldType);
+        plugin.getRealmCreator().createRealmAsync(player, realmName, templateType);
     }
 
     private void handleDelete(Player player, String[] args) {
@@ -347,14 +341,23 @@ public class RealmsCommand implements CommandExecutor, TabCompleter {
                     }
                     return filterByPrefix(worlds, args[1]);
                 case "create":
-                    return Arrays.asList("FLAT", "NORMAL", "AMPLIFIED");
+                    // No suggestions for realm name, it's a free-form argument
+                    return new ArrayList<>();
                 default:
                     return new ArrayList<>();
             }
         } else if (args.length == 3) {
             String subcommand = args[0].toLowerCase();
             if (subcommand.equals("create")) {
-                return Arrays.asList("FLAT", "NORMAL", "AMPLIFIED");
+                // Suggest template types from the templates folder
+                java.io.File templatesFolder = new java.io.File(plugin.getDataFolder(), plugin.getRealmConfig().getTemplatesFolder());
+                if (templatesFolder.isDirectory()) {
+                    String[] templateDirs = templatesFolder.list((current, name) -> new java.io.File(current, name).isDirectory());
+                    if (templateDirs != null) {
+                        return filterByPrefix(Arrays.asList(templateDirs), args[2]);
+                    }
+                }
+                return new ArrayList<>();
             } else if (subcommand.equals("invite") || subcommand.equals("transfer")) {
                 return Bukkit.getOnlinePlayers().stream()
                         .map(Player::getName)
