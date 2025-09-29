@@ -35,22 +35,22 @@ public class BukkitNativeHook implements WorldPluginHook {
     public CompletableFuture<World> createWorldAsync(String worldName, WorldCreator creator, Player player) {
         CompletableFuture<World> future = new CompletableFuture<>();
         
-        // Run the world creation asynchronously to avoid blocking the main thread
-        CompletableFuture.runAsync(() -> {
+        // Schedule the world creation on the main thread
+        Bukkit.getScheduler().runTask(plugin, () -> {
             try {
                 // Configure the WorldCreator with the provided parameters
                 WorldCreator worldCreator = WorldCreator.name(worldName)
-                    .environment(creator.environment())
-                    .type(creator.type())
-                    .seed(creator.seed());
-                
+                        .environment(creator.environment())
+                        .type(creator.type())
+                        .seed(creator.seed());
+
                 if (creator.generator() != null) {
                     worldCreator.generator(creator.generator());
                 }
-                
+
                 // Create the world using Bukkit API
                 World world = worldCreator.createWorld();
-                
+
                 if (world != null) {
                     plugin.getLogger().info("Successfully created world '" + worldName + "' using Bukkit native API");
                     future.complete(world);
