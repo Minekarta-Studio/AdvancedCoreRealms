@@ -3,6 +3,7 @@ package com.minekarta.advancedcorerealms.menu;
 import com.minekarta.advancedcorerealms.AdvancedCoreRealms;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
@@ -26,7 +27,7 @@ public abstract class Menu implements InventoryHolder {
     public Menu(AdvancedCoreRealms plugin, Player player, String title, int size) {
         this.plugin = plugin;
         this.player = player;
-        this.miniMessage = MiniMessage.miniMessage();
+        this.miniMessage = MiniMessage.builder().tags(TagResolver.standard()).build();
         Component inventoryTitle = miniMessage.deserialize(title);
         this.inventory = Bukkit.createInventory(this, size, inventoryTitle);
     }
