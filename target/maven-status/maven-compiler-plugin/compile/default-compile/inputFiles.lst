@@ -7,6 +7,7 @@
 /app/src/main/java/com/minekarta/advancedcorerealms/commands/base/SubCommand.java
 /app/src/main/java/com/minekarta/advancedcorerealms/commands/handlers/AcceptCommand.java
 /app/src/main/java/com/minekarta/advancedcorerealms/commands/handlers/BackCommand.java
+/app/src/main/java/com/minekarta/advancedcorerealms/commands/handlers/BorderCommand.java
 /app/src/main/java/com/minekarta/advancedcorerealms/commands/handlers/CreateCommand.java
 /app/src/main/java/com/minekarta/advancedcorerealms/commands/handlers/DeleteCommand.java
 /app/src/main/java/com/minekarta/advancedcorerealms/commands/handlers/DenyCommand.java
@@ -61,13 +62,14 @@
 /app/src/main/java/com/minekarta/advancedcorerealms/realm/RealmInventoryService.java
 /app/src/main/java/com/minekarta/advancedcorerealms/realm/Role.java
 /app/src/main/java/com/minekarta/advancedcorerealms/storage/DatabaseManager.java
+/app/src/main/java/com/minekarta/advancedcorerealms/storage/DatabaseProvider.java
 /app/src/main/java/com/minekarta/advancedcorerealms/storage/InventoryStorage.java
+/app/src/main/java/com/minekarta/advancedcorerealms/storage/SQLiteProvider.java
 /app/src/main/java/com/minekarta/advancedcorerealms/storage/YamlInventoryStorage.java
 /app/src/main/java/com/minekarta/advancedcorerealms/storage/package-info.java
 /app/src/main/java/com/minekarta/advancedcorerealms/transactions/TransactionLogger.java
 /app/src/main/java/com/minekarta/advancedcorerealms/transactions/TransactionRecord.java
 /app/src/main/java/com/minekarta/advancedcorerealms/upgrades/UpgradeManager.java
-/app/src/main/java/com/minekarta/advancedcorerealms/upgrades/definitions/BorderTier.java
 /app/src/main/java/com/minekarta/advancedcorerealms/upgrades/definitions/DifficultyUpgrade.java
 /app/src/main/java/com/minekarta/advancedcorerealms/upgrades/definitions/KeepLoadedUpgrade.java
 /app/src/main/java/com/minekarta/advancedcorerealms/upgrades/definitions/MemberSlotTier.java
@@ -78,3 +80,7 @@
 /app/src/main/java/com/minekarta/advancedcorerealms/worldborder/BorderColor.java
 /app/src/main/java/com/minekarta/advancedcorerealms/worldborder/PlayerChangeBorderColorEvent.java
 /app/src/main/java/com/minekarta/advancedcorerealms/worldborder/PlayerToggleBorderEvent.java
+/app/src/main/java/com/minekarta/advancedcorerealms/worldborder/WorldBorderConfig.java
+/app/src/main/java/com/minekarta/advancedcorerealms/worldborder/WorldBorderManager.java
+/app/src/main/java/com/minekarta/advancedcorerealms/worldborder/WorldBorderService.java
+/app/src/main/java/com/minekarta/advancedcorerealms/worldborder/WorldBorderTier.java

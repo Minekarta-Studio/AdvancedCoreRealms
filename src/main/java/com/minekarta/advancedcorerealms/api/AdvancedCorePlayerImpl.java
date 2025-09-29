@@ -93,16 +93,16 @@ public class AdvancedCorePlayerImpl implements AdvancedCorePlayer {
     private void sendWorldBorderPacket(Realm realm) {
         org.bukkit.World bukkitWorld = realm.getBukkitWorld();
         if (bukkitWorld != null && player.getWorld().equals(bukkitWorld)) {
-            double centerX = realm.getCenterX();
-            double centerZ = realm.getCenterZ();
+            double centerX = realm.getBorderCenterX();
+            double centerZ = realm.getBorderCenterZ();
             double size = realm.getBorderSize();
 
             if (centerX == 0.0 && centerZ == 0.0) {
                 org.bukkit.Location spawnLocation = bukkitWorld.getSpawnLocation();
                 centerX = spawnLocation.getX();
                 centerZ = spawnLocation.getZ();
-                realm.setCenterX(centerX);
-                realm.setCenterZ(centerZ);
+                realm.setBorderCenterX(centerX);
+                realm.setBorderCenterZ(centerZ);
             }
 
             BorderColor color = getBorderColor();

@@ -31,6 +31,13 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 
+/**
+ * The main class for the AdvancedCoreRealms plugin.
+ * This plugin provides a comprehensive solution for managing player-owned realms,
+ * including features like creation, upgrades, member management, and world borders.
+ * It is built to be highly performant and scalable, with a focus on asynchronous
+ * data handling and a modular architecture.
+ */
 public class AdvancedCoreRealms extends JavaPlugin {
 
     private static AdvancedCoreRealms instance;
@@ -53,13 +60,30 @@ public class AdvancedCoreRealms extends JavaPlugin {
     private WorldBorderConfig worldBorderConfig;
     private WorldBorderManager worldBorderManager;
 
+    /**
+     * Called when the plugin is enabled.
+     * The initialization process is critical and follows a strict order:
+     * 1.  Initialize the {@link DatabaseManager}. This is the most critical step. If the database
+     *     cannot be initialized (e.g., due to file permissions or corruption), the plugin
+     *     will automatically disable itself to prevent data loss or corruption.
+     * 2.  Load all configuration files.
+     * 3.  Initialize all other managers and services.
+     * 4.  Register commands and event listeners.
+     */
     @Override
     public void onEnable() {
         instance = this;
 
-        // Initialize Database Manager first
+        // Initialize Database Manager first. This is a critical step.
+        // The DatabaseManager will handle its own initialization and, if it fails,
+        // it will log the error and disable the plugin to prevent corruption.
         this.databaseManager = new DatabaseManager(this);
         this.databaseManager.initialize();
+
+        // If the plugin is disabled by the database manager, stop further initialization.
+        if (!this.isEnabled()) {
+            return;
+        }
 
         // Load configuration
         saveDefaultConfig();
@@ -158,6 +182,11 @@ public class AdvancedCoreRealms extends JavaPlugin {
         }
     }
 
+    /**
+     * Called when the plugin is disabled.
+     * Gracefully shuts down all services, most importantly closing the database connection pool
+     * to prevent resource leaks.
+     */
     @Override
     public void onDisable() {
         // Close database connection pool
@@ -228,6 +257,11 @@ public class AdvancedCoreRealms extends JavaPlugin {
         return transactionLogger;
     }
 
+    /**
+     * Gets the manager responsible for handling database connections and providers.
+     *
+     * @return The active {@link DatabaseManager}.
+     */
     public DatabaseManager getDatabaseManager() {
         return databaseManager;
     }

@@ -3,10 +3,10 @@ package com.minekarta.advancedcorerealms.upgrades;
 import com.minekarta.advancedcorerealms.AdvancedCoreRealms;
 import com.minekarta.advancedcorerealms.data.object.Realm;
 import com.minekarta.advancedcorerealms.economy.EconomyService;
-import com.minekarta.advancedcorerealms.upgrades.definitions.BorderTier;
 import com.minekarta.advancedcorerealms.upgrades.definitions.DifficultyUpgrade;
 import com.minekarta.advancedcorerealms.upgrades.definitions.KeepLoadedUpgrade;
 import com.minekarta.advancedcorerealms.upgrades.definitions.MemberSlotTier;
+import com.minekarta.advancedcorerealms.worldborder.WorldBorderTier;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 
@@ -16,10 +16,8 @@ import java.util.List;
 import java.util.Map;
 import com.minekarta.advancedcorerealms.api.events.RealmUpgradeEvent;
 import com.minekarta.advancedcorerealms.api.events.RealmUpgradedEvent;
-import org.bukkit.Bukkit;
 
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -30,7 +28,7 @@ public class UpgradeManager {
     private final Map<String, ReentrantLock> realmLocks = new ConcurrentHashMap<>();
 
     // Upgrade Definitions
-    private List<BorderTier> borderTiers = new ArrayList<>();
+    private List<WorldBorderTier> borderTiers = new ArrayList<>();
     private List<MemberSlotTier> memberSlotTiers = new ArrayList<>();
     private Map<String, DifficultyUpgrade> difficultyUpgrades = new ConcurrentHashMap<>();
     private KeepLoadedUpgrade keepLoadedUpgrade;
@@ -58,13 +56,11 @@ public class UpgradeManager {
             for (String key : borderTiersSection.getKeys(false)) {
                 ConfigurationSection tierSection = borderTiersSection.getConfigurationSection(key);
                 if (tierSection != null) {
-                    String id = tierSection.getString("id");
-                    int size = tierSection.getInt("size");
-                    double price = tierSection.getDouble("price");
-                    borderTiers.add(new BorderTier(id, size, price));
+                    // Directly use WorldBorderTier from the worldborder package
+                    borderTiers.add(new WorldBorderTier(tierSection));
                 }
             }
-            borderTiers.sort(Comparator.comparingInt(BorderTier::getSize));
+            borderTiers.sort(Comparator.comparingDouble(WorldBorderTier::getSize));
             plugin.getLogger().info("Loaded " + borderTiers.size() + " border tiers.");
         }
 
@@ -104,7 +100,7 @@ public class UpgradeManager {
     }
 
     // Getters for upgrade definitions
-    public List<BorderTier> getBorderTiers() {
+    public List<WorldBorderTier> getBorderTiers() {
         return borderTiers;
     }
 
@@ -121,11 +117,11 @@ public class UpgradeManager {
     }
 
     // Logic to get next available upgrades
-    public Optional<BorderTier> getNextBorderTier(Realm realm) {
+    public Optional<WorldBorderTier> getNextBorderTier(Realm realm) {
         int currentSize = realm.getBorderSize();
         return borderTiers.stream()
                 .filter(tier -> tier.getSize() > currentSize)
-                .min(Comparator.comparingInt(BorderTier::getSize));
+                .min(Comparator.comparingDouble(WorldBorderTier::getSize));
     }
 
     public Optional<MemberSlotTier> getNextMemberSlotTier(Realm realm) {
@@ -137,20 +133,7 @@ public class UpgradeManager {
                 .min(Comparator.comparingInt(MemberSlotTier::getAdditionalSlots));
     }
 
-    /**
-     * Handles the entire process of a player purchasing a border upgrade for their realm.
-     * This method performs all necessary checks (e.g., balance, ownership), handles the
-     * economic transaction, and applies the changes.
-     * <p>
-     * The actual world border modification is delegated to the {@link com.minekarta.advancedcorerealms.worldborder.WorldBorderService},
-     * which ensures the change is applied safely, even if the world is not currently loaded.
-     * If any step fails, the transaction is rolled back, and the player is refunded.
-     *
-     * @param player The player attempting the purchase.
-     * @param realm  The realm being upgraded.
-     * @param tier   The new border tier being purchased.
-     */
-    public void purchaseBorderUpgrade(Player player, Realm realm, BorderTier tier) {
+    public void purchaseBorderUpgrade(Player player, Realm realm, WorldBorderTier tier) {
         ReentrantLock lock = realmLocks.computeIfAbsent(realm.getName(), k -> new ReentrantLock());
         lock.lock();
         try {
@@ -188,14 +171,17 @@ public class UpgradeManager {
 
             String oldTierId = realm.getBorderTierId();
             int oldBorderSize = realm.getBorderSize();
+            WorldBorderTier oldTier = borderTiers.stream()
+                    .filter(t -> t.getId().equals(oldTierId))
+                    .findFirst().orElse(null);
 
             try {
                 // Apply change to Realm object
                 realm.setBorderTierId(tier.getId());
-                realm.setBorderSize(tier.getSize());
+                realm.setBorderSize((int) tier.getSize());
 
                 // Apply change to the live world
-                plugin.getWorldBorderService().applyWorldBorder(realm);
+                plugin.getWorldBorderService().applyWorldBorder(realm, tier);
 
                 // Persist the changes
                 plugin.getRealmManager().updateRealm(realm);
@@ -221,7 +207,11 @@ public class UpgradeManager {
                 realm.setBorderSize(oldBorderSize);
 
                 // Attempt to revert live world change
-                plugin.getWorldBorderService().applyWorldBorder(realm);
+                if (oldTier != null) {
+                    plugin.getWorldBorderService().applyWorldBorder(realm, oldTier);
+                } else {
+                    plugin.getLogger().warning("Could not find old border tier '" + oldTierId + "' to perform rollback for realm " + realm.getName());
+                }
 
                 plugin.getLanguageManager().sendMessage(player, "upgrade.failure-refunded");
             }
@@ -275,16 +265,6 @@ public class UpgradeManager {
         }
     }
 
-    /**
-     * Handles the purchase of a difficulty upgrade for a realm.
-     * It validates the purchase, processes the payment, and applies the new difficulty.
-     * The difficulty is applied to the world via the {@link com.minekarta.advancedcorerealms.worldborder.WorldBorderService},
-     * ensuring the change is handled safely and centrally.
-     *
-     * @param player  The player purchasing the upgrade.
-     * @param realm   The realm to modify.
-     * @param upgrade The difficulty upgrade being purchased.
-     */
     public void purchaseDifficultyUpgrade(Player player, Realm realm, DifficultyUpgrade upgrade) {
         ReentrantLock lock = realmLocks.computeIfAbsent(realm.getName(), k -> new ReentrantLock());
         lock.lock();

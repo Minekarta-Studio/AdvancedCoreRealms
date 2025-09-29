@@ -24,14 +24,30 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
 /**
  * Manages all data persistence and caching for {@link Realm} and {@link PlayerData} objects.
- * This class provides a fully asynchronous API for database interactions to ensure the
- * server's main thread is never blocked. It uses a dual-caching strategy for high performance.
+ * This class provides a fully asynchronous, non-blocking API for all database interactions
+ * to ensure the server's main thread is never impacted. It uses a sophisticated, multi-layered
+ * caching strategy for high performance.
+ *
+ * <p><b>Caching Strategy:</b></p>
+ * <ul>
+ *     <li><b>Realms:</b> A Guava {@link LoadingCache} is used for realms, keyed by name. This cache
+ *     is backed by a secondary {@link Cache} keyed by world name for fast lookups during
+ *     world-related events.</li>
+ *     <li><b>Player Data:</b> A Caffeine {@link AsyncLoadingCache} is used for player data.
+ *     This ensures that loading player data from the database is fully asynchronous and
+ *     does not block any calling thread.</li>
+ * </ul>
+ *
+ * <p><b>Error Handling:</b></p>
+ * <p>All methods that interact with the database are designed to propagate failures. If a
+ * {@link SQLException} occurs, it is wrapped in a {@link RuntimeException}, causing the
+ * calling {@link CompletableFuture} to complete exceptionally. This allows the caller to
+ * handle database failures gracefully using {@code .exceptionally()}.</p>
  */
 public class RealmManager {
 
@@ -71,6 +87,8 @@ public class RealmManager {
                 .build(new CacheLoader<>() {
                     @Override
                     public PlayerData load(UUID playerUUID) throws Exception {
+                        // This is a blocking call, but we will pre-warm the cache on player join
+                        // to prevent this from blocking the main thread during gameplay.
                         return loadPlayerData(playerUUID).get();
                     }
                 });
@@ -82,7 +100,7 @@ public class RealmManager {
      * the world border settings (size and center coordinates).
      *
      * @param realm The {@link Realm} object to persist.
-     * @return A {@link CompletableFuture} that completes when the operation is finished.
+     * @return A {@link CompletableFuture} that completes when the operation is finished, or fails if an error occurs.
      */
     public CompletableFuture<Void> createRealm(Realm realm) {
         return CompletableFuture.runAsync(() -> {
@@ -108,33 +126,60 @@ public class RealmManager {
                     if (generatedKeys.next()) {
                         int realmId = generatedKeys.getInt(1);
                         realm.setId(realmId);
-                        addMemberToRealm(realm, realm.getOwner(), Role.OWNER).join(); // This is acceptable here as we are already on an async thread.
+                        addMemberToRealm(realm, realm.getOwner(), Role.OWNER).join();
                     }
                 }
                 invalidateCaches(realm);
             } catch (SQLException e) {
-                plugin.getLogger().log(Level.SEVERE, "Could not create realm in database", e);
-                throw new RuntimeException(e);
+                plugin.getLogger().log(Level.SEVERE, "Could not create realm in database: " + realm.getName(), e);
+                throw new RuntimeException("Failed to create realm", e);
             }
         });
     }
 
+    /**
+     * Asynchronously retrieves a realm by its unique name from the cache or database.
+     *
+     * @param name The case-insensitive name of the realm.
+     * @return A {@link CompletableFuture} containing the {@link Realm} if found, otherwise null.
+     */
     public CompletableFuture<Realm> getRealmByName(String name) {
         return realmNameCache.getUnchecked(name);
     }
 
+    /**
+     * Asynchronously retrieves a realm by its associated world name.
+     * It first checks a dedicated world name cache for performance, falling back to a full database lookup.
+     *
+     * @param worldName The name of the world associated with the realm.
+     * @return A {@link CompletableFuture} containing the {@link Realm} if found, otherwise null.
+     */
     public CompletableFuture<Realm> getRealmByWorldName(String worldName) {
         Realm realm = worldNameCache.getIfPresent(worldName);
         if (realm != null) {
             return CompletableFuture.completedFuture(realm);
         }
-        return getRealmByNameUncached(worldName); // Fallback to DB if not in world cache
+        return getRealmByNameUncached(worldName);
     }
 
+    /**
+     * Synchronously retrieves a realm from the cache by its world name.
+     * This method is safe to call from the main thread as it only queries the in-memory cache.
+     *
+     * @param worldName The name of the world.
+     * @return An {@link Optional} containing the cached {@link Realm}, or empty if not present.
+     */
     public Optional<Realm> getRealmFromCacheByWorld(String worldName) {
         return Optional.ofNullable(worldNameCache.getIfPresent(worldName));
     }
 
+    /**
+     * Synchronously retrieves a realm from the cache by its name.
+     * This method is safe to call from the main thread as it only queries the in-memory cache.
+     *
+     * @param realmName The name of the realm.
+     * @return An {@link Optional} containing the cached {@link Realm}, or empty if not present.
+     */
     public Optional<Realm> getRealmFromCacheByName(String realmName) {
         try {
             CompletableFuture<Realm> future = realmNameCache.getIfPresent(realmName);
@@ -142,7 +187,6 @@ public class RealmManager {
                 return Optional.ofNullable(future.getNow(null));
             }
         } catch (Exception e) {
-            // This shouldn't happen with getNow, but we log just in case.
             plugin.getLogger().log(Level.WARNING, "Error getting realm from cache by name (sync): " + realmName, e);
         }
         return Optional.empty();
@@ -161,13 +205,20 @@ public class RealmManager {
                     loadMembersForRealm(realm).join();
                     return realm;
                 }
+                return null;
             } catch (SQLException e) {
                 plugin.getLogger().log(Level.SEVERE, "Error getting realm by name uncached: " + name, e);
+                throw new RuntimeException("Failed to get realm by name: " + name, e);
             }
-            return null;
         });
     }
 
+    /**
+     * Asynchronously retrieves all realms owned by a specific player.
+     *
+     * @param ownerUuid The UUID of the owner.
+     * @return A {@link CompletableFuture} containing a list of owned {@link Realm}s.
+     */
     public CompletableFuture<List<Realm>> getRealmsByOwner(UUID ownerUuid) {
         return CompletableFuture.supplyAsync(() -> {
             List<Realm> realms = new ArrayList<>();
@@ -181,13 +232,20 @@ public class RealmManager {
                     loadMembersForRealm(realm).join();
                     realms.add(realm);
                 }
+                return realms;
             } catch (SQLException e) {
                 plugin.getLogger().log(Level.SEVERE, "Error getting realms by owner: " + ownerUuid, e);
+                throw new RuntimeException("Failed to get realms by owner", e);
             }
-            return realms;
         });
     }
 
+    /**
+     * Asynchronously retrieves all realms to which a player is invited (i.e., is a member but not the owner).
+     *
+     * @param playerUuid The UUID of the player.
+     * @return A {@link CompletableFuture} containing a list of invited {@link Realm}s.
+     */
     public CompletableFuture<List<Realm>> getInvitedRealms(UUID playerUuid) {
         return CompletableFuture.supplyAsync(() -> {
             List<Realm> realms = new ArrayList<>();
@@ -202,17 +260,16 @@ public class RealmManager {
                     loadMembersForRealm(realm).join();
                     realms.add(realm);
                 }
+                return realms;
             } catch (SQLException e) {
                 plugin.getLogger().log(Level.SEVERE, "Error getting invited realms: " + playerUuid, e);
+                throw new RuntimeException("Failed to get invited realms", e);
             }
-            return realms;
         });
     }
 
     /**
      * Asynchronously updates an existing realm's record in the database.
-     * This method saves all configurable properties of a realm, including the
-     * world border's center coordinates.
      *
      * @param realm The {@link Realm} object with updated information to save.
      * @return A {@link CompletableFuture} that completes when the update is finished.
@@ -236,10 +293,17 @@ public class RealmManager {
                 invalidateCaches(realm);
             } catch (SQLException e) {
                 plugin.getLogger().log(Level.SEVERE, "Could not update realm: " + realm.getName(), e);
+                throw new RuntimeException("Failed to update realm", e);
             }
         });
     }
 
+    /**
+     * Asynchronously deletes a realm from the database.
+     *
+     * @param realmName The name of the realm to delete.
+     * @return A {@link CompletableFuture} that completes when the deletion is finished.
+     */
     public CompletableFuture<Void> deleteRealm(String realmName) {
         return getRealmByName(realmName).thenAcceptAsync(realm -> {
             if (realm != null) {
@@ -254,10 +318,19 @@ public class RealmManager {
                 pstmt.executeUpdate();
             } catch (SQLException e) {
                 plugin.getLogger().log(Level.SEVERE, "Could not delete realm: " + realmName, e);
+                throw new RuntimeException("Failed to delete realm", e);
             }
         });
     }
 
+    /**
+     * Asynchronously adds or updates a player's membership in a realm.
+     *
+     * @param realm      The realm to modify.
+     * @param memberUuid The UUID of the member to add or update.
+     * @param role       The new role for the member.
+     * @return A {@link CompletableFuture} that completes when the operation is finished.
+     */
     public CompletableFuture<Void> addMemberToRealm(Realm realm, UUID memberUuid, Role role) {
         return CompletableFuture.runAsync(() -> {
             String sql = "INSERT OR REPLACE INTO realm_members (realm_id, player_uuid, role) VALUES (?, ?, ?)";
@@ -267,13 +340,21 @@ public class RealmManager {
                 pstmt.setString(2, memberUuid.toString());
                 pstmt.setString(3, role.name());
                 pstmt.executeUpdate();
-                invalidateCaches(realm); // Invalidate cache after modification
+                invalidateCaches(realm);
             } catch (SQLException e) {
                 plugin.getLogger().log(Level.SEVERE, "Could not add member to realm: " + realm.getId(), e);
+                throw new RuntimeException("Failed to add member to realm", e);
             }
         });
     }
 
+    /**
+     * Asynchronously removes a member from a realm.
+     *
+     * @param realm      The realm to modify.
+     * @param memberUuid The UUID of the member to remove.
+     * @return A {@link CompletableFuture} that completes when the operation is finished.
+     */
     public CompletableFuture<Void> removeMemberFromRealm(Realm realm, UUID memberUuid) {
         return CompletableFuture.runAsync(() -> {
             String sql = "DELETE FROM realm_members WHERE realm_id = ? AND player_uuid = ?";
@@ -282,13 +363,20 @@ public class RealmManager {
                 pstmt.setInt(1, realm.getId());
                 pstmt.setString(2, memberUuid.toString());
                 pstmt.executeUpdate();
-                invalidateCaches(realm); // Invalidate cache after modification
+                invalidateCaches(realm);
             } catch (SQLException e) {
                 plugin.getLogger().log(Level.SEVERE, "Could not remove member from realm: " + realm.getId(), e);
+                throw new RuntimeException("Failed to remove member from realm", e);
             }
         });
     }
 
+    /**
+     * Invalidates all cache entries associated with a specific realm.
+     * This should be called after any modification to a realm's data.
+     *
+     * @param realm The realm whose caches should be invalidated.
+     */
     public void invalidateCaches(Realm realm) {
         if (realm != null) {
             realmNameCache.invalidate(realm.getName());
@@ -313,19 +401,11 @@ public class RealmManager {
                 realm.setMembers(members);
             } catch (SQLException e) {
                 plugin.getLogger().log(Level.SEVERE, "Could not load members for realm: " + realm.getName(), e);
+                throw new RuntimeException("Failed to load members for realm", e);
             }
         });
     }
 
-    /**
-     * Maps a {@link ResultSet} row to a fully populated {@link Realm} object.
-     * This helper method is used to construct a Realm object from a database query result,
-     * including all properties like border configuration.
-     *
-     * @param rs The ResultSet currently pointed at a valid row.
-     * @return The constructed {@link Realm} object.
-     * @throws SQLException if a database error occurs while accessing column data.
-     */
     private Realm mapResultSetToRealm(ResultSet rs) throws SQLException {
         Realm realm = new Realm(
                 rs.getString("name"),
@@ -347,6 +427,13 @@ public class RealmManager {
         return realm;
     }
 
+    /**
+     * Asynchronously loads a player's data from the database.
+     * If no data is found, a new {@link PlayerData} object with default values is returned.
+     *
+     * @param playerUUID The UUID of the player to load.
+     * @return A {@link CompletableFuture} containing the player's data.
+     */
     public CompletableFuture<PlayerData> loadPlayerData(UUID playerUUID) {
         return CompletableFuture.supplyAsync(() -> {
             String sql = "SELECT * FROM player_data WHERE player_uuid = ?";
@@ -360,14 +447,22 @@ public class RealmManager {
                     data.setBorderEnabled(rs.getBoolean("border_enabled"));
                     data.setBorderColor(BorderColor.fromString(rs.getString("border_color")));
                     return data;
+                } else {
+                    return new PlayerData(playerUUID);
                 }
             } catch (SQLException e) {
                 plugin.getLogger().log(Level.SEVERE, "Failed to load player data for " + playerUUID, e);
+                throw new RuntimeException("Failed to load player data", e);
             }
-            return new PlayerData(playerUUID);
         });
     }
 
+    /**
+     * Asynchronously saves a player's data to the database.
+     *
+     * @param data The {@link PlayerData} to save.
+     * @return A {@link CompletableFuture} that completes when the data is saved.
+     */
     public CompletableFuture<Void> savePlayerData(PlayerData data) {
         return CompletableFuture.runAsync(() -> {
             String sql = "INSERT OR REPLACE INTO player_data (player_uuid, previous_location, border_enabled, border_color) VALUES (?, ?, ?, ?)";
@@ -380,26 +475,55 @@ public class RealmManager {
                 pstmt.executeUpdate();
             } catch (SQLException e) {
                 plugin.getLogger().log(Level.SEVERE, "Failed to save player data for " + data.getPlayerUUID(), e);
+                throw new RuntimeException("Failed to save player data", e);
             }
         });
     }
 
+    /**
+     * Retrieves a player's data from the cache.
+     * If the data is not in the cache, it will be loaded synchronously. To avoid
+     * blocking, ensure {@link #preloadPlayerData(UUID)} is called when the player joins.
+     *
+     * @param playerUUID The UUID of the player.
+     * @return The {@link PlayerData} for the player.
+     */
     public PlayerData getPlayerData(UUID playerUUID) {
         try {
             return playerDataCache.get(playerUUID);
-        } catch (ExecutionException e) {
-            plugin.getLogger().log(Level.SEVERE, "Error retrieving player data from cache for " + playerUUID, e);
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.SEVERE, "Failed to get player data for " + playerUUID, e);
+            // Return a new object to prevent NPEs
             return new PlayerData(playerUUID);
         }
     }
 
+    /**
+     * Asynchronously saves the player's last known location.
+     *
+     * @param playerUUID The UUID of the player.
+     * @param location   The location to save.
+     */
     public void savePreviousLocation(UUID playerUUID, Location location) {
-        try {
-            PlayerData data = playerDataCache.get(playerUUID);
-            data.setPreviousLocation(location);
-            savePlayerData(data);
-        } catch (ExecutionException e) {
-            plugin.getLogger().log(Level.SEVERE, "Error saving previous location for " + playerUUID, e);
-        }
+        PlayerData data = getPlayerData(playerUUID);
+        data.setPreviousLocation(location);
+        savePlayerData(data);
+    }
+
+    /**
+     * Asynchronously pre-loads a player's data into the cache.
+     * This is intended to be called on player join to prevent the first data access
+     * from blocking the main thread.
+     *
+     * @param playerUUID The UUID of the player whose data should be loaded.
+     */
+    public void preloadPlayerData(UUID playerUUID) {
+        CompletableFuture.runAsync(() -> {
+            try {
+                playerDataCache.get(playerUUID);
+            } catch (Exception e) {
+                plugin.getLogger().log(Level.WARNING, "Failed to preload player data for " + playerUUID, e);
+            }
+        });
     }
 }

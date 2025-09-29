@@ -5,8 +5,8 @@ import com.minekarta.advancedcorerealms.data.object.Realm;
 import com.minekarta.advancedcorerealms.economy.EconomyService;
 import com.minekarta.advancedcorerealms.manager.LanguageManager;
 import com.minekarta.advancedcorerealms.manager.RealmManager;
-import com.minekarta.advancedcorerealms.manager.world.WorldManager;
-import com.minekarta.advancedcorerealms.upgrades.definitions.BorderTier;
+import com.minekarta.advancedcorerealms.worldborder.WorldBorderService;
+import com.minekarta.advancedcorerealms.worldborder.WorldBorderTier;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.PluginManager;
 import org.junit.jupiter.api.BeforeEach;
@@ -16,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
@@ -31,7 +32,7 @@ class UpgradeTransactionAtomicityTest {
     @Mock private AdvancedCoreRealms plugin;
     @Mock private EconomyService economyService;
     @Mock private RealmManager realmManager;
-    @Mock private WorldManager worldManager;
+    @Mock private WorldBorderService worldBorderService;
     @Mock private LanguageManager languageManager;
     @Mock private Player player;
     @Mock private PluginManager pluginManager;
@@ -41,23 +42,31 @@ class UpgradeTransactionAtomicityTest {
     private UpgradeManager upgradeManager;
 
     private Realm testRealm;
-    private BorderTier nextTier;
+    private WorldBorderTier nextTier;
+    private WorldBorderTier initialTier;
 
     @BeforeEach
     void setUp() {
+        // Initialize Realm and Tiers
         testRealm = new Realm("TestRealm", UUID.randomUUID(), "world_test", "default");
-        testRealm.setBorderSize(50);
-        nextTier = new BorderTier("tier_100", 100, 5000);
+        initialTier = new WorldBorderTier("tier_50", 50, 0, 0, 10, 15, 0, 0);
+        nextTier = new WorldBorderTier("tier_100", 100, 0, 0, 10, 15, 10, 5000);
 
+        testRealm.setBorderTierId(initialTier.getId());
+        testRealm.setBorderSize((int) initialTier.getSize());
+
+        // Setup Mocks
         lenient().when(plugin.getEconomyService()).thenReturn(economyService);
         lenient().when(plugin.getRealmManager()).thenReturn(realmManager);
-        lenient().when(plugin.getWorldManager()).thenReturn(worldManager);
+        lenient().when(plugin.getWorldBorderService()).thenReturn(worldBorderService);
         lenient().when(plugin.getLanguageManager()).thenReturn(languageManager);
         lenient().when(plugin.getServer()).thenReturn(server);
         lenient().when(server.getPluginManager()).thenReturn(pluginManager);
         lenient().when(plugin.getLogger()).thenReturn(logger);
 
+        // Initialize UpgradeManager and load it with test data
         upgradeManager = new UpgradeManager(plugin);
+        upgradeManager.getBorderTiers().addAll(List.of(initialTier, nextTier));
     }
 
     @Test
@@ -74,8 +83,8 @@ class UpgradeTransactionAtomicityTest {
         upgradeManager.purchaseBorderUpgrade(player, testRealm, nextTier);
 
         verify(economyService, times(1)).deposit(player, nextTier.getPrice());
-        assertEquals(50, testRealm.getBorderSize(), "Border size should be reverted to its original value");
-        assertNotEquals(nextTier.getId(), testRealm.getBorderTierId(), "Border tier ID should be reverted");
+        assertEquals(initialTier.getSize(), testRealm.getBorderSize(), "Border size should be reverted to its original value");
+        assertEquals(initialTier.getId(), testRealm.getBorderTierId(), "Border tier ID should be reverted");
         verify(languageManager, times(1)).sendMessage(player, "upgrade.failure-refunded");
     }
 
@@ -88,7 +97,7 @@ class UpgradeTransactionAtomicityTest {
 
         upgradeManager.purchaseBorderUpgrade(player, testRealm, nextTier);
 
-        assertEquals(50, testRealm.getBorderSize(), "Border size should remain unchanged");
+        assertEquals(initialTier.getSize(), testRealm.getBorderSize(), "Border size should remain unchanged");
         verify(realmManager, never()).updateRealm(any(Realm.class));
         verify(economyService, never()).deposit(any(Player.class), anyDouble());
         verify(languageManager, times(1)).sendMessage(player, "economy.withdrawal-failed");

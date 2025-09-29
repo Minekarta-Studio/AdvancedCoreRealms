@@ -20,6 +20,9 @@ public class PlayerConnectionListener implements Listener {
     
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
+        // Asynchronously preload player data to warm up the cache
+        plugin.getRealmManager().preloadPlayerData(event.getPlayer().getUniqueId());
+
         // Initialize player's location for inventory service
         realmInventoryService.handlePlayerJoin(event.getPlayer());
 
