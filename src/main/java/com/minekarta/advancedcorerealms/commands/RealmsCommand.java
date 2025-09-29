@@ -48,6 +48,7 @@ public class RealmsCommand implements CommandExecutor, TabCompleter {
         registerSubCommand(new TransferCommand(plugin));
         registerSubCommand(new BackCommand(plugin));
         registerSubCommand(new UpgradeCommand(plugin));
+        registerSubCommand(new BorderCommand(plugin));
     }
 
     private void registerSubCommand(SubCommand subCommand) {

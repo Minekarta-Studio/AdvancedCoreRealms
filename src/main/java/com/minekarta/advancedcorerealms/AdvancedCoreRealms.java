@@ -13,6 +13,8 @@ import com.minekarta.advancedcorerealms.storage.InventoryStorage;
 import com.minekarta.advancedcorerealms.storage.YamlInventoryStorage;
 import com.minekarta.advancedcorerealms.transactions.TransactionLogger;
 import com.minekarta.advancedcorerealms.upgrades.UpgradeManager;
+import com.minekarta.advancedcorerealms.worldborder.WorldBorderConfig;
+import com.minekarta.advancedcorerealms.worldborder.WorldBorderManager;
 import com.minekarta.advancedcorerealms.worldborder.WorldBorderService;
 import com.minekarta.advancedcorerealms.commands.RealmsCommand;
 import com.minekarta.advancedcorerealms.gui.GUIManager;
@@ -48,6 +50,8 @@ public class AdvancedCoreRealms extends JavaPlugin {
     private TransactionLogger transactionLogger;
     private DatabaseManager databaseManager;
     private WorldBorderService worldBorderService;
+    private WorldBorderConfig worldBorderConfig;
+    private WorldBorderManager worldBorderManager;
 
     @Override
     public void onEnable() {
@@ -56,6 +60,12 @@ public class AdvancedCoreRealms extends JavaPlugin {
         // Initialize Database Manager first
         this.databaseManager = new DatabaseManager(this);
         this.databaseManager.initialize();
+
+        // Load configuration
+        saveDefaultConfig();
+        this.realmConfig = new RealmConfig(getConfig());
+        this.worldBorderConfig = new WorldBorderConfig(this);
+        this.worldBorderConfig.load();
 
         // Initialize managers
         this.languageManager = new LanguageManager(this);
@@ -66,11 +76,9 @@ public class AdvancedCoreRealms extends JavaPlugin {
         this.upgradeManager = new UpgradeManager(this);
         this.playerStateManager = new PlayerStateManager(this);
         this.realmManager = new RealmManager(this);
+        this.worldBorderManager = new WorldBorderManager(this);
 
         // Load configuration
-        saveDefaultConfig();
-        this.realmConfig = new RealmConfig(getConfig());
-
         // Create default template directory if it doesn't exist
         createDefaultTemplateDirectory();
 
@@ -226,6 +234,14 @@ public class AdvancedCoreRealms extends JavaPlugin {
 
     public WorldBorderService getWorldBorderService() {
         return worldBorderService;
+    }
+
+    public WorldBorderConfig getWorldBorderConfig() {
+        return worldBorderConfig;
+    }
+
+    public WorldBorderManager getWorldBorderManager() {
+        return worldBorderManager;
     }
 
     // Cache for AdvancedCorePlayer instances

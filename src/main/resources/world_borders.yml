@@ -1,0 +1,53 @@
+# ----------------------------------------------------------------------------------- #
+# Configuration for World Border Tiers in AdvancedCoreRealms
+#
+# This file defines different upgradeable tiers for realm world borders.
+# Each tier has a unique ID (e.g., 'tier_1', 'default') and several properties:
+#
+# - size: The diameter of the world border in blocks.
+# - center_x: The default X-coordinate for the border center. Can be overridden per-realm.
+# - center_z: The default Z-coordinate for the border center. Can be overridden per-realm.
+# - warning_distance: Distance in blocks from the border where a warning appears.
+# - warning_time: Time in seconds a player has to get back inside before taking damage.
+# - transition_time: Time in seconds for the border to smoothly transition to this size.
+# - cost_to_upgrade: The cost (using the server's economy) to upgrade to this tier. Set to 0 if free.
+#
+# The 'default_tier' key specifies which tier to use for newly created realms
+# if their template doesn't specify one.
+# ----------------------------------------------------------------------------------- #
+
+default_tier: "tier_1"
+
+tiers:
+  tier_1:
+    size: 200.0
+    center_x: 0.0
+    center_z: 0.0
+    warning_distance: 10
+    warning_time: 15
+    transition_time: 10
+    cost_to_upgrade: 0
+  tier_2:
+    size: 500.0
+    center_x: 0.0
+    center_z: 0.0
+    warning_distance: 15
+    warning_time: 15
+    transition_time: 15
+    cost_to_upgrade: 1000
+  tier_3:
+    size: 1000.0
+    center_x: 0.0
+    center_z: 0.0
+    warning_distance: 20
+    warning_time: 15
+    transition_time: 20
+    cost_to_upgrade: 5000
+  tier_4:
+    size: 2500.0
+    center_x: 0.0
+    center_z: 0.0
+    warning_distance: 25
+    warning_time: 15
+    transition_time: 30
+    cost_to_upgrade: 20000
