@@ -76,9 +76,17 @@ public class RealmManager {
                 });
     }
 
+    /**
+     * Asynchronously creates a new realm record in the database.
+     * This includes all realm properties, such as ownership, configuration, and
+     * the world border settings (size and center coordinates).
+     *
+     * @param realm The {@link Realm} object to persist.
+     * @return A {@link CompletableFuture} that completes when the operation is finished.
+     */
     public CompletableFuture<Void> createRealm(Realm realm) {
         return CompletableFuture.runAsync(() -> {
-            String sql = "INSERT INTO realms (name, owner_uuid, world_name, template, created_at, is_flat, difficulty, keep_loaded, border_tier_id, member_slot_tier_id, border_size, max_players) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            String sql = "INSERT INTO realms (name, owner_uuid, world_name, template, created_at, is_flat, difficulty, keep_loaded, border_tier_id, member_slot_tier_id, border_size, max_players, border_center_x, border_center_z) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
             try (Connection conn = dbManager.getConnection();
                  PreparedStatement pstmt = conn.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)) {
                 pstmt.setString(1, realm.getName());
@@ -93,6 +101,8 @@ public class RealmManager {
                 pstmt.setString(10, realm.getMemberSlotTierId());
                 pstmt.setInt(11, realm.getBorderSize());
                 pstmt.setInt(12, realm.getMaxPlayers());
+                pstmt.setDouble(13, realm.getBorderCenterX());
+                pstmt.setDouble(14, realm.getBorderCenterZ());
                 pstmt.executeUpdate();
                 try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
                     if (generatedKeys.next()) {
@@ -199,9 +209,17 @@ public class RealmManager {
         });
     }
 
+    /**
+     * Asynchronously updates an existing realm's record in the database.
+     * This method saves all configurable properties of a realm, including the
+     * world border's center coordinates.
+     *
+     * @param realm The {@link Realm} object with updated information to save.
+     * @return A {@link CompletableFuture} that completes when the update is finished.
+     */
     public CompletableFuture<Void> updateRealm(Realm realm) {
         return CompletableFuture.runAsync(() -> {
-            String sql = "UPDATE realms SET owner_uuid = ?, difficulty = ?, keep_loaded = ?, border_tier_id = ?, member_slot_tier_id = ?, border_size = ?, max_players = ? WHERE name = ?";
+            String sql = "UPDATE realms SET owner_uuid = ?, difficulty = ?, keep_loaded = ?, border_tier_id = ?, member_slot_tier_id = ?, border_size = ?, max_players = ?, border_center_x = ?, border_center_z = ? WHERE name = ?";
             try (Connection conn = dbManager.getConnection();
                  PreparedStatement pstmt = conn.prepareStatement(sql)) {
                 pstmt.setString(1, realm.getOwner().toString());
@@ -211,7 +229,9 @@ public class RealmManager {
                 pstmt.setString(5, realm.getMemberSlotTierId());
                 pstmt.setInt(6, realm.getBorderSize());
                 pstmt.setInt(7, realm.getMaxPlayers());
-                pstmt.setString(8, realm.getName());
+                pstmt.setDouble(8, realm.getBorderCenterX());
+                pstmt.setDouble(9, realm.getBorderCenterZ());
+                pstmt.setString(10, realm.getName());
                 pstmt.executeUpdate();
                 invalidateCaches(realm);
             } catch (SQLException e) {
@@ -297,6 +317,15 @@ public class RealmManager {
         });
     }
 
+    /**
+     * Maps a {@link ResultSet} row to a fully populated {@link Realm} object.
+     * This helper method is used to construct a Realm object from a database query result,
+     * including all properties like border configuration.
+     *
+     * @param rs The ResultSet currently pointed at a valid row.
+     * @return The constructed {@link Realm} object.
+     * @throws SQLException if a database error occurs while accessing column data.
+     */
     private Realm mapResultSetToRealm(ResultSet rs) throws SQLException {
         Realm realm = new Realm(
                 rs.getString("name"),
@@ -313,6 +342,8 @@ public class RealmManager {
         realm.setMemberSlotTierId(rs.getString("member_slot_tier_id"));
         realm.setBorderSize(rs.getInt("border_size"));
         realm.setMaxPlayers(rs.getInt("max_players"));
+        realm.setBorderCenterX(rs.getDouble("border_center_x"));
+        realm.setBorderCenterZ(rs.getDouble("border_center_z"));
         return realm;
     }
 

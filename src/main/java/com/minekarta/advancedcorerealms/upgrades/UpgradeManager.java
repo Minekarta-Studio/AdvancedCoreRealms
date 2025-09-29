@@ -137,7 +137,19 @@ public class UpgradeManager {
                 .min(Comparator.comparingInt(MemberSlotTier::getAdditionalSlots));
     }
 
-    // Purchase logic will be added here
+    /**
+     * Handles the entire process of a player purchasing a border upgrade for their realm.
+     * This method performs all necessary checks (e.g., balance, ownership), handles the
+     * economic transaction, and applies the changes.
+     * <p>
+     * The actual world border modification is delegated to the {@link com.minekarta.advancedcorerealms.worldborder.WorldBorderService},
+     * which ensures the change is applied safely, even if the world is not currently loaded.
+     * If any step fails, the transaction is rolled back, and the player is refunded.
+     *
+     * @param player The player attempting the purchase.
+     * @param realm  The realm being upgraded.
+     * @param tier   The new border tier being purchased.
+     */
     public void purchaseBorderUpgrade(Player player, Realm realm, BorderTier tier) {
         ReentrantLock lock = realmLocks.computeIfAbsent(realm.getName(), k -> new ReentrantLock());
         lock.lock();
@@ -183,7 +195,7 @@ public class UpgradeManager {
                 realm.setBorderSize(tier.getSize());
 
                 // Apply change to the live world
-                plugin.getWorldManager().updateWorldBorder(realm);
+                plugin.getWorldBorderService().applyWorldBorder(realm);
 
                 // Persist the changes
                 plugin.getRealmManager().updateRealm(realm);
@@ -209,7 +221,7 @@ public class UpgradeManager {
                 realm.setBorderSize(oldBorderSize);
 
                 // Attempt to revert live world change
-                plugin.getWorldManager().updateWorldBorder(realm);
+                plugin.getWorldBorderService().applyWorldBorder(realm);
 
                 plugin.getLanguageManager().sendMessage(player, "upgrade.failure-refunded");
             }
@@ -263,6 +275,16 @@ public class UpgradeManager {
         }
     }
 
+    /**
+     * Handles the purchase of a difficulty upgrade for a realm.
+     * It validates the purchase, processes the payment, and applies the new difficulty.
+     * The difficulty is applied to the world via the {@link com.minekarta.advancedcorerealms.worldborder.WorldBorderService},
+     * ensuring the change is handled safely and centrally.
+     *
+     * @param player  The player purchasing the upgrade.
+     * @param realm   The realm to modify.
+     * @param upgrade The difficulty upgrade being purchased.
+     */
     public void purchaseDifficultyUpgrade(Player player, Realm realm, DifficultyUpgrade upgrade) {
         ReentrantLock lock = realmLocks.computeIfAbsent(realm.getName(), k -> new ReentrantLock());
         lock.lock();
@@ -288,7 +310,7 @@ public class UpgradeManager {
 
             try {
                 realm.setDifficulty(upgrade.getId());
-                plugin.getWorldManager().updateWorldDifficulty(realm);
+                plugin.getWorldBorderService().applyWorldDifficulty(realm); // Use new service
                 plugin.getRealmManager().updateRealm(realm);
 
                 plugin.getLanguageManager().sendMessage(player, "upgrade.success", "%upgrade%", "Difficulty", "%new_value%", upgrade.getId());
@@ -301,7 +323,7 @@ public class UpgradeManager {
                 plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to apply difficulty upgrade for realm " + realm.getName() + ". Refunding player.", e);
                 economyService.deposit(player, upgrade.getPrice());
                 realm.setDifficulty(oldDifficulty);
-                plugin.getWorldManager().updateWorldDifficulty(realm);
+                plugin.getWorldBorderService().applyWorldDifficulty(realm); // Use new service
                 plugin.getLanguageManager().sendMessage(player, "upgrade.failure-refunded");
             }
         } finally {
