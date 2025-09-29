@@ -29,6 +29,27 @@ All configuration is located in the `plugins/AdvancedCoreRealms/` directory.
 -   `languages/`: Contains language files (`en.yml`, `es.yml`, etc.).
 -   `menu/`: Contains all GUI menu configuration files.
 -   `templates/`: Contains world templates for realm creation.
+-   `inventories/`: Stores per-realm player inventories.
+
+### Per-Realm Inventories
+To provide a unique and isolated experience, AdvancedCoreRealms now manages player inventories on a per-realm basis.
+
+**How it Works:**
+- **Inventory Swapping**: When a player enters a realm, their current inventory (main, armor, off-hand, and ender chest) is saved, and their realm-specific inventory is loaded. When they leave, their original inventory is restored. This prevents unauthorized item transfers between worlds.
+- **Data Safety**: The system is designed to be safe against accidental data loss. If a player disconnects mid-swap or the server crashes, their inventory state is securely cached and restored upon their next login.
+- **Storage**: Inventories are stored in a human-readable YAML format under `plugins/AdvancedCoreRealms/inventories/`. Each realm has a folder named after its world folder name, containing individual files for each player's inventory (`<player-uuid>.yml`).
+
+### Access Control & Roles
+Realms are now protected by a role-based access control system, ensuring only authorized players can build and interact.
+
+**Roles:**
+- **OWNER**: The creator of the realm. Has full permissions and cannot be kicked or demoted.
+- **ADMIN**: Can manage the realm, including building, interacting, and managing members (promoting, demoting, and kicking).
+- **MEMBER**: The default role for invited players. Can build and interact within the realm.
+- **VISITOR**: A player who is not a member. Can explore the realm but cannot build, break blocks, or interact with containers and doors.
+
+**Managing Members:**
+Realm owners and admins can manage their members through the new **Manage Members GUI**, accessible from the `Realm Management` menu.
 
 ### Foldered World Creation (Milestone A)
 
@@ -122,6 +143,11 @@ main_menu:
 - `advancedcorerealms.user.create`: Allows creating new realms.
 - `advancedcorerealms.limit.realms.<count>`: Sets the maximum number of realms a player can own (e.g., `advancedcorerealms.limit.realms.3`).
 - `advancedcorerealms.donor.create`: (Example) A permission for donors to create realms, can be configured in `main_menu.yml`.
+
+### Management Permissions
+- `advancedcorerealms.manage`: Grants access to the member management GUI. Intended for realm owners and admins.
+- `advancedcorerealms.role.transfer`: Allows a player to use the ownership transfer feature in the GUI.
+- `advancedcorerealms.build.public`: Allows building in public realms (if the realm has public building enabled).
 
 ### Admin Permissions
 - `advancedcorerealms.admin.*`: Grants all administrative permissions.

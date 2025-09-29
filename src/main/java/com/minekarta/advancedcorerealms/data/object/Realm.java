@@ -1,16 +1,19 @@
 package com.minekarta.advancedcorerealms.data.object;
 
+import com.minekarta.advancedcorerealms.realm.Role;
 import org.bukkit.World;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public class Realm {
     private String name;
     private UUID owner;
-    private List<UUID> members;
+    private Map<UUID, Role> members;
     private List<UUID> accessList;  // Additional access permissions beyond members
     private boolean isFlat;
     private Instant createdAt;
@@ -31,7 +34,8 @@ public class Realm {
         this.owner = owner;
         this.worldName = worldName;
         this.template = template;
-        this.members = new ArrayList<>();
+        this.members = new HashMap<>();
+        this.members.put(owner, Role.OWNER); // Owner is always a member with OWNER role
         this.accessList = new ArrayList<>();
         this.isFlat = false; // This can be configured per-template later
         this.createdAt = Instant.now();
@@ -54,7 +58,8 @@ public class Realm {
         this.template = template;
         this.createdAt = createdAt;
         this.isFlat = isFlat;
-        this.members = new ArrayList<>();
+        this.members = new HashMap<>();
+        this.members.put(owner, Role.OWNER); // Ensure owner is set
         this.accessList = new ArrayList<>();
         this.maxPlayers = 8;
         this.isCreativeMode = false;
@@ -80,16 +85,25 @@ public class Realm {
         return owner;
     }
     
-    public void setOwner(UUID owner) {
-        this.owner = owner;
+    public void setOwner(UUID newOwner) {
+        // Demote old owner to admin, promote new owner
+        if (this.owner != null) {
+            members.put(this.owner, Role.ADMIN);
+        }
+        this.owner = newOwner;
+        members.put(newOwner, Role.OWNER);
     }
     
-    public List<UUID> getMembers() {
+    public Map<UUID, Role> getMembers() {
         return members;
     }
-    
-    public void setMembers(List<UUID> members) {
+
+    public void setMembers(Map<UUID, Role> members) {
         this.members = members;
+        // Ensure owner always has OWNER role
+        if (this.owner != null) {
+            this.members.put(this.owner, Role.OWNER);
+        }
     }
     
     public List<UUID> getAccessList() {
@@ -161,28 +175,40 @@ public class Realm {
     }
     
     public boolean isMember(UUID playerId) {
-        return members.contains(playerId) || owner.equals(playerId);
+        return members.containsKey(playerId);
+    }
+
+    public Role getRole(UUID playerId) {
+        if (owner.equals(playerId)) {
+            return Role.OWNER;
+        }
+        return members.getOrDefault(playerId, Role.VISITOR);
     }
     
     public boolean hasAccess(UUID playerId) {
-        // Owner, members, and those in access list can access
-        return owner.equals(playerId) || members.contains(playerId) || accessList.contains(playerId);
+        // Owner and members have access. Visitors do not.
+        return isMember(playerId);
     }
     
     public void addMember(UUID playerId) {
-        if (!members.contains(playerId)) {
-            members.add(playerId);
-        }
+        // Add player with default MEMBER role
+        addMember(playerId, Role.MEMBER);
+    }
+
+    public void addMember(UUID playerId, Role role) {
+        if (owner.equals(playerId)) return; // Cannot change owner's role here
+        members.put(playerId, role);
     }
     
     public void removeMember(UUID playerId) {
+        if (owner.equals(playerId)) return; // Cannot remove the owner
         members.remove(playerId);
         // Also remove from access list if there
         accessList.remove(playerId);
     }
     
     public void addToAccessList(UUID playerId) {
-        if (!accessList.contains(playerId) && !owner.equals(playerId) && !members.contains(playerId)) {
+        if (!accessList.contains(playerId) && !isMember(playerId)) {
             accessList.add(playerId);
         }
     }

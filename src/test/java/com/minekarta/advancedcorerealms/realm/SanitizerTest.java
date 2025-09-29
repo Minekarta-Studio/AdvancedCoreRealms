@@ -40,7 +40,7 @@ class SanitizerTest {
     @ParameterizedTest
     @CsvSource({
             "valid_name, valid_name",
-            "MyAwesomeRealm, myawesomrealm", // Test lowercase and length
+            "MyAwesomeRealm, myawesomerealm", // Test lowercase and length
             "Invalid!@#Name, invalidname",    // Test invalid character removal
             "a-really-long-name-that-is-way-too-big, a-really-long-n", // Test truncation
             "UPPER_CASE, upper_case",      // Test uppercase

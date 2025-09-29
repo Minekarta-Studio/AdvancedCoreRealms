@@ -53,8 +53,8 @@ public class InviteManager {
                 String realmName = innerMap.get(playerId);
                 Realm realm = plugin.getWorldDataManager().getRealm(realmName);
                 if (realm != null) {
-                    if (!realm.getMembers().contains(playerId)) {
-                        realm.getMembers().add(playerId);
+                    if (!realm.isMember(playerId)) {
+                        realm.addMember(playerId);
                         plugin.getWorldDataManager().saveData();
                         languageManager.sendMessage(player, "realm.invite_accepted", "%realm%", realmName);
                         

@@ -5,6 +5,8 @@ import com.minekarta.advancedcorerealms.menu.menus.BorderColorMenu;
 import com.minekarta.advancedcorerealms.menu.menus.MainMenu;
 import com.minekarta.advancedcorerealms.menu.menus.RealmCreationMenu;
 import com.minekarta.advancedcorerealms.menu.menus.RealmManagementMenu;
+import com.minekarta.advancedcorerealms.data.object.Realm;
+import com.minekarta.advancedcorerealms.menu.menus.ManageMembersMenu;
 import com.minekarta.advancedcorerealms.menu.menus.RealmPlayersMenu;
 import com.minekarta.advancedcorerealms.menu.menus.RealmSettingsMenu;
 import com.minekarta.advancedcorerealms.menu.menus.RealmsListMenu;
@@ -82,5 +84,9 @@ public class MenuManager {
 
     public void openUpgradeMenu(Player player) {
         new UpgradeMenu(plugin, player, upgradeConfig, this).open();
+    }
+
+    public void openManageMembersMenu(Player player, Realm realm) {
+        new ManageMembersMenu(plugin, player, realm).open();
     }
 }

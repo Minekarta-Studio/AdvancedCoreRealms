@@ -113,8 +113,10 @@ public class RealmManagementMenu extends Menu {
                 plugin.getWorldManager().teleportToRealm(player, realmName);
                 player.closeInventory();
                 break;
-            case "manage_players":
-                menuManager.openRealmPlayersMenu(player, realmName, 1, fromMyRealms);
+            case "manage_members":
+                plugin.getWorldDataManager().getRealmByWorldName(realmName).ifPresent(realm -> {
+                    menuManager.openManageMembersMenu(player, realm);
+                });
                 break;
             case "realm_settings":
                 menuManager.openRealmSettingsMenu(player, realmName, fromMyRealms);

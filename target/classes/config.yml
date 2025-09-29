@@ -7,6 +7,16 @@ max-realms-per-player: 3 # The maximum number of realms a player can own (requir
 default-world-type: "FLAT" # Default world type on creation: FLAT or NORMAL
 default-max-players: 8 # Default maximum number of players allowed in a realm
 
+# Realm Settings
+realms:
+  templates-folder: "templates"
+  server-realms-folder: "realms"
+  world-name-format: "acr_{owner}_{name}_{ts}"
+  default-border-size: 50
+  sanitize:
+    max-length: 30
+    allowed-regex: "[a-z0-9_-]"
+
 # Inventory Settings
 separate-inventories: true # Enable/disable separate inventories for realms
 

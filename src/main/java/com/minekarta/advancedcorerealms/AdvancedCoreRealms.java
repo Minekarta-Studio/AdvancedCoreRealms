@@ -4,23 +4,25 @@ import com.minekarta.advancedcorerealms.api.AdvancedCorePlayer;
 import com.minekarta.advancedcorerealms.api.AdvancedCorePlayerImpl;
 import com.minekarta.advancedcorerealms.config.RealmConfig;
 import com.minekarta.advancedcorerealms.realm.RealmCreator;
+import com.minekarta.advancedcorerealms.realm.RealmInventoryService;
+import com.minekarta.advancedcorerealms.storage.InventoryStorage;
+import com.minekarta.advancedcorerealms.storage.YamlInventoryStorage;
 import com.minekarta.advancedcorerealms.upgrades.UpgradeManager;
 import com.minekarta.advancedcorerealms.commands.RealmsCommand;
 import com.minekarta.advancedcorerealms.data.PlayerDataManager;
 import com.minekarta.advancedcorerealms.data.WorldDataManager;
 import com.minekarta.advancedcorerealms.gui.GUIManager;
-import com.minekarta.advancedcorerealms.listeners.InventoryClickListener;
-import com.minekarta.advancedcorerealms.listeners.InventoryListener;
-import com.minekarta.advancedcorerealms.listeners.PlayerConnectionListener;
+import com.minekarta.advancedcorerealms.listeners.*;
+import com.minekarta.advancedcorerealms.manager.InviteManager;
 import com.minekarta.advancedcorerealms.menu.MenuManager;
 import com.minekarta.advancedcorerealms.placeholder.AdvancedCoreRealmsPlaceholder;
-import com.minekarta.advancedcorerealms.listeners.PlayerWorldListener;
-import com.minekarta.advancedcorerealms.manager.InviteManager;
 import com.minekarta.advancedcorerealms.manager.LanguageManager;
 import com.minekarta.advancedcorerealms.manager.PlayerStateManager;
 import com.minekarta.advancedcorerealms.manager.world.WorldManager;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import java.io.File;
 
 public class AdvancedCoreRealms extends JavaPlugin {
     
@@ -36,6 +38,8 @@ public class AdvancedCoreRealms extends JavaPlugin {
     private PlayerStateManager playerStateManager;
     private RealmConfig realmConfig;
     private RealmCreator realmCreator;
+    private InventoryStorage inventoryStorage;
+    private RealmInventoryService realmInventoryService;
     
     @Override
     public void onEnable() {
@@ -53,6 +57,10 @@ public class AdvancedCoreRealms extends JavaPlugin {
         this.playerStateManager = new PlayerStateManager(this);
         this.realmCreator = new RealmCreator(this);
         
+        // Initialize storage and services
+        this.inventoryStorage = new YamlInventoryStorage(this);
+        this.realmInventoryService = new RealmInventoryService(this, this.inventoryStorage);
+
         // Register PlaceholderAPI if it's available
         if (getServer().getPluginManager().getPlugin("PlaceholderAPI") != null) {
             new AdvancedCoreRealmsPlaceholder(this).register();
@@ -76,6 +84,8 @@ public class AdvancedCoreRealms extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new PlayerWorldListener(this), this);
         getServer().getPluginManager().registerEvents(new InventoryListener(this), this);
         getServer().getPluginManager().registerEvents(new InventoryClickListener(this), this);
+        getServer().getPluginManager().registerEvents(new RealmProtectionListener(this), this);
+        getServer().getPluginManager().registerEvents(new RealmTeleportListener(this), this);
         
         // Initialize data managers
         this.worldDataManager.loadData();
@@ -153,6 +163,14 @@ public class AdvancedCoreRealms extends JavaPlugin {
 
     public RealmCreator getRealmCreator() {
         return realmCreator;
+    }
+
+    public InventoryStorage getInventoryStorage() {
+        return inventoryStorage;
+    }
+
+    public RealmInventoryService getRealmInventoryService() {
+        return realmInventoryService;
     }
     
     // Cache for AdvancedCorePlayer instances

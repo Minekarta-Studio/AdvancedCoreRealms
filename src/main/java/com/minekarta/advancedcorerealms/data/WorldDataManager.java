@@ -47,6 +47,19 @@ public class WorldDataManager {
             boolean isFlat = worldsConfig.getBoolean(path + ".isFlat", false);
 
             Realm realm = new Realm(name, owner, worldName, template, createdAt, isFlat);
+
+            // Load members
+            if (worldsConfig.isConfigurationSection(path + ".members")) {
+                for (String memberUuid : worldsConfig.getConfigurationSection(path + ".members").getKeys(false)) {
+                    try {
+                        com.minekarta.advancedcorerealms.realm.Role role = com.minekarta.advancedcorerealms.realm.Role.valueOf(worldsConfig.getString(path + ".members." + memberUuid));
+                        realm.addMember(UUID.fromString(memberUuid), role);
+                    } catch (IllegalArgumentException e) {
+                        plugin.getLogger().warning("Invalid role for member " + memberUuid + " in realm " + name);
+                    }
+                }
+            }
+
             realms.put(name, realm);
         }
         plugin.getLogger().info("Loaded " + realms.size() + " realms from data file.");
@@ -66,11 +79,11 @@ public class WorldDataManager {
             worldsConfig.set(path + ".createdAt", realm.getCreatedAt().toString());
             worldsConfig.set(path + ".isFlat", realm.isFlat());
 
-            List<String> memberStrings = new ArrayList<>();
-            for (UUID member : realm.getMembers()) {
-                memberStrings.add(member.toString());
+            // Save members
+            for (Map.Entry<UUID, com.minekarta.advancedcorerealms.realm.Role> entry : realm.getMembers().entrySet()) {
+                worldsConfig.set(path + ".members." + entry.getKey().toString(), entry.getValue().name());
             }
-            worldsConfig.set(path + ".members", memberStrings);
+
             worldsConfig.set(path + ".transferable-items", realm.getTransferableItems());
         }
         
@@ -119,7 +132,7 @@ public class WorldDataManager {
     public List<Realm> getPlayerInvitedRealms(UUID playerId) {
         List<Realm> invitedRealms = new ArrayList<>();
         for (Realm realm : realms.values()) {
-            if (realm.getMembers().contains(playerId) && !realm.getOwner().equals(playerId)) {
+            if (realm.getMembers().containsKey(playerId) && !realm.getOwner().equals(playerId)) {
                 invitedRealms.add(realm);
             }
         }
@@ -129,5 +142,11 @@ public class WorldDataManager {
     public boolean isPlayerInRealm(UUID playerId, String realmName) {
         Realm realm = getRealm(realmName);
         return realm != null && realm.isMember(playerId);
+    }
+
+    public Optional<Realm> getRealmByWorldName(String worldName) {
+        return realms.values().stream()
+                .filter(realm -> worldName.equals(realm.getWorldName()))
+                .findFirst();
     }
 }

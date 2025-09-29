@@ -44,7 +44,7 @@ public class RealmPlayersMenu extends Menu {
         this.allPlayers = new ArrayList<>();
         if (realm != null) {
             allPlayers.add(realm.getOwner());
-            allPlayers.addAll(realm.getMembers());
+            allPlayers.addAll(realm.getMembers().keySet());
         }
 
         setMenuItems();
