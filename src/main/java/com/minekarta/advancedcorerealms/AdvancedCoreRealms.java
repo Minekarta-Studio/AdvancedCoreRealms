@@ -61,6 +61,11 @@ public class AdvancedCoreRealms extends JavaPlugin {
         this.guiManager = new GUIManager(this);
         this.upgradeManager = new UpgradeManager(this);
         this.playerStateManager = new PlayerStateManager(this);
+
+        // Load configuration
+        saveDefaultConfig();
+        this.realmConfig = new RealmConfig(getConfig());
+
         this.realmCreator = new RealmCreator(this);
         
         // Initialize storage and services
@@ -73,9 +78,6 @@ public class AdvancedCoreRealms extends JavaPlugin {
             new AdvancedCoreRealmsPlaceholder(this).register();
         }
         
-        // Load configuration
-        saveDefaultConfig();
-        this.realmConfig = new RealmConfig(getConfig());
         this.languageManager.loadLanguage();
         
         // Load upgrades and initialize economy
