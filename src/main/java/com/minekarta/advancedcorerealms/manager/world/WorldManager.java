@@ -5,13 +5,16 @@ import com.minekarta.advancedcorerealms.data.object.Realm;
 import com.minekarta.advancedcorerealms.manager.LanguageManager;
 import com.minekarta.advancedcorerealms.manager.RealmManager;
 import org.bukkit.Bukkit;
-import org.bukkit.Difficulty;
 import org.bukkit.World;
 import org.bukkit.WorldCreator;
 import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Comparator;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 
@@ -30,81 +33,93 @@ public class WorldManager {
     }
 
     /**
-     * Asynchronously deletes a realm, including teleporting players, unloading the world,
-     * deleting world files, and removing the database entry.
+     * Asynchronously deletes a realm's world from the correct 'realms' subdirectory.
      *
-     * @param realm The realm to be deleted.
+     * @param realm The realm whose world is to be deleted.
      * @return A CompletableFuture that completes with true if successful, false otherwise.
      */
     public CompletableFuture<Boolean> deleteWorld(Realm realm) {
-        return CompletableFuture.supplyAsync(() -> {
-            // Step 1: Unload the world (must run on main thread)
-            try {
-                return Bukkit.getScheduler().callSyncMethod(plugin, () -> {
-                    World world = Bukkit.getWorld(realm.getWorldName());
-                    if (world != null) {
-                        world.getPlayers().forEach(p -> {
-                            p.teleport(Bukkit.getWorlds().get(0).getSpawnLocation());
-                            languageManager.sendMessage(p, "realm.world_deleted_kick", "%world%", realm.getName());
-                        });
-                        return Bukkit.unloadWorld(world, true);
-                    }
-                    return true; // World wasn't loaded, so it's "successfully" unloaded
-                }).get();
-            } catch (Exception e) {
-                plugin.getLogger().log(Level.SEVERE, "Exception while unloading world " + realm.getWorldName(), e);
-                return false;
+        final String worldPath = "realms/" + realm.getWorldFolderName();
+        CompletableFuture<Boolean> unloadFuture = new CompletableFuture<>();
+
+        // Unloading must happen on the main thread
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            World world = Bukkit.getWorld(worldPath);
+            if (world != null) {
+                world.getPlayers().forEach(p -> {
+                    p.teleport(Bukkit.getWorlds().get(0).getSpawnLocation());
+                    languageManager.sendMessage(p, "realm.world_deleted_kick", "%world%", realm.getName());
+                });
+
+                if (Bukkit.unloadWorld(world, true)) {
+                    plugin.getLogger().info("Successfully unloaded realm world: " + worldPath);
+                    unloadFuture.complete(true);
+                } else {
+                    plugin.getLogger().severe("Failed to unload realm world: " + worldPath);
+                    unloadFuture.complete(false);
+                }
+            } else {
+                unloadFuture.complete(true);
             }
-        }).thenComposeAsync(unloaded -> {
+        });
+
+        return unloadFuture.thenComposeAsync(unloaded -> {
             if (!unloaded) {
                 return CompletableFuture.completedFuture(false);
             }
 
-            // Step 2: Delete world files (async)
-            try {
-                File worldFolder = new File(Bukkit.getWorldContainer(), realm.getWorldName());
-                if (worldFolder.exists()) {
-                    deleteDirectory(worldFolder);
+            // Delete world files from the correct path
+            File worldFolder = new File(Bukkit.getWorldContainer(), worldPath);
+            if (worldFolder.exists()) {
+                try {
+                    deleteDirectory(worldFolder.toPath());
+                    plugin.getLogger().info("Successfully deleted world folder: " + worldPath);
+                } catch (IOException e) {
+                    plugin.getLogger().log(Level.SEVERE, "Failed to delete world folder: " + worldPath, e);
+                    return CompletableFuture.completedFuture(false);
                 }
-            } catch (IOException e) {
-                plugin.getLogger().log(Level.SEVERE, "Failed to delete world folder: " + realm.getWorldName(), e);
-                return CompletableFuture.completedFuture(false);
             }
-
-            // Step 3: Delete database record (async)
-            return realmManager.deleteRealm(realm.getName()).thenApply(v -> true);
+            return CompletableFuture.completedFuture(true);
         });
     }
 
+    /**
+     * Teleports a player to a realm, loading the world from the correct 'realms' subdirectory if needed.
+     *
+     * @param player The player to teleport.
+     * @param realmName The display name of the realm.
+     */
+    public void teleportToRealm(Player player, String realmName) {
+        Optional<Realm> optionalRealm = realmManager.getRealmByName(realmName);
 
-    public void teleportToRealm(Player player, String worldName) {
-        realmManager.getRealmByWorldName(worldName).thenAccept(realm -> {
-            if (realm == null) {
-                languageManager.sendMessage(player, "error.realm_not_found");
-                return;
-            }
+        if (optionalRealm.isEmpty()) {
+            languageManager.sendMessage(player, "error.realm_not_found");
+            return;
+        }
 
-            if (!realm.isMember(player.getUniqueId()) && !player.hasPermission("advancedcorerealms.admin.teleport.any")) {
-                languageManager.sendMessage(player, "error.no_access_to_realm");
-                return;
-            }
+        Realm realm = optionalRealm.get();
+        final String worldPath = "realms/" + realm.getWorldFolderName();
 
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                World world = Bukkit.getWorld(worldName);
+        if (!realm.isMember(player.getUniqueId()) && !player.hasPermission("advancedcorerealms.admin.teleport.any")) {
+            languageManager.sendMessage(player, "error.no_access_to_realm");
+            return;
+        }
+
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            World world = Bukkit.getWorld(worldPath);
+            if (world == null) {
+                languageManager.sendMessage(player, "world.loading", "%world%", realm.getName());
+                world = new WorldCreator(worldPath).createWorld();
                 if (world == null) {
-                    languageManager.sendMessage(player, "world.loading", "%world%", worldName);
-                    world = Bukkit.createWorld(new WorldCreator(worldName));
-                    if (world == null) {
-                        languageManager.sendMessage(player, "error.world_load_failed", "%world%", worldName);
-                        return;
-                    }
+                    languageManager.sendMessage(player, "error.world_load_failed", "%world%", realm.getName());
+                    return;
                 }
+            }
 
-                realmManager.savePreviousLocation(player.getUniqueId(), player.getLocation());
-                player.teleport(world.getSpawnLocation());
-                languageManager.sendMessage(player, "world.teleport", "%world%", worldName);
-                plugin.getRealmInventoryService().enterRealm(player, realm);
-            });
+            realmManager.savePreviousLocation(player.getUniqueId(), player.getLocation());
+            player.teleport(world.getSpawnLocation());
+            languageManager.sendMessage(player, "world.teleport", "%world%", realm.getName());
+            plugin.getRealmInventoryService().enterRealm(player, realm);
         });
     }
 
@@ -112,19 +127,17 @@ public class WorldManager {
         return worldPluginManager;
     }
 
-    private void deleteDirectory(File directory) throws IOException {
-        if (!directory.exists()) return;
-        if (directory.isDirectory()) {
-            File[] files = directory.listFiles();
-            if (files != null) {
-                for (File file : files) {
-                    deleteDirectory(file);
-                }
+    private void deleteDirectory(Path path) throws IOException {
+        if (Files.exists(path)) {
+            try (var walk = Files.walk(path)) {
+                walk.sorted(Comparator.reverseOrder()).forEach(p -> {
+                    try {
+                        Files.delete(p);
+                    } catch (IOException e) {
+                        plugin.getLogger().log(Level.SEVERE, "Failed to delete path: " + p, e);
+                    }
+                });
             }
         }
-        if (!directory.delete()) {
-            throw new IOException("Failed to delete " + directory);
-        }
     }
-
 }

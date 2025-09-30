@@ -2,6 +2,7 @@ package com.minekarta.advancedcorerealms.commands.handlers;
 
 import com.minekarta.advancedcorerealms.AdvancedCoreRealms;
 import com.minekarta.advancedcorerealms.commands.base.SubCommand;
+import com.minekarta.advancedcorerealms.data.object.Realm;
 import com.minekarta.advancedcorerealms.manager.LanguageManager;
 import com.minekarta.advancedcorerealms.manager.RealmManager;
 import com.minekarta.advancedcorerealms.manager.world.WorldManager;
@@ -10,8 +11,10 @@ import org.bukkit.entity.Player;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
+import java.util.stream.Collectors;
 
 public class DeleteCommand implements SubCommand {
 
@@ -40,27 +43,30 @@ public class DeleteCommand implements SubCommand {
         }
 
         String realmName = args[1];
+        Optional<Realm> optionalRealm = realmManager.getRealmByName(realmName);
 
-        realmManager.getRealmByName(realmName).thenCompose(realm -> {
-            if (realm == null) {
-                languageManager.sendMessage(player, "error.realm_not_found");
-                return CompletableFuture.completedFuture(null); // Stop the chain
-            }
+        if (optionalRealm.isEmpty()) {
+            languageManager.sendMessage(player, "error.realm_not_found");
+            return;
+        }
 
-            if (!realm.getOwner().equals(player.getUniqueId()) && !player.hasPermission("advancedcorerealms.admin.delete")) {
-                languageManager.sendMessage(player, "error.not-owner");
-                return CompletableFuture.completedFuture(null); // Stop the chain
-            }
+        Realm realm = optionalRealm.get();
+        if (!realm.getOwner().equals(player.getUniqueId()) && !player.hasPermission("advancedcorerealms.admin.delete")) {
+            languageManager.sendMessage(player, "error.not_owner");
+            return;
+        }
 
-            languageManager.sendMessage(player, "realm.deletion_started", "%realm%", realmName);
-            return worldManager.deleteWorld(realm);
+        languageManager.sendMessage(player, "realm.deletion_started", "%realm%", realmName);
 
-        }).thenAccept(success -> {
-            if (success == null) {
-                // A prerequisite failed, message already sent.
-                return;
-            }
-            if (success) {
+        // First, delete the world files and unload the world.
+        CompletableFuture<Boolean> worldDeletionFuture = worldManager.deleteWorld(realm);
+
+        // Then, delete the realm data file.
+        CompletableFuture<Void> dataDeletionFuture = realmManager.deleteRealm(realm);
+
+        // Wait for both to complete
+        CompletableFuture.allOf(worldDeletionFuture, dataDeletionFuture).thenRun(() -> {
+            if (worldDeletionFuture.join()) { // Check if world deletion was successful
                 languageManager.sendMessage(player, "world.deleted", "%world%", realmName);
             } else {
                 languageManager.sendMessage(player, "error.world_delete_failed", "%world%", realmName);
@@ -84,8 +90,13 @@ public class DeleteCommand implements SubCommand {
 
     @Override
     public List<String> onTabComplete(Player player, String[] args) {
-        // Tab completion for realm names is complex with an async backend.
-        // For now, we return an empty list to avoid blocking the server.
+        if (args.length == 2) {
+            // Suggest realms owned by the player
+            return realmManager.getRealmsByOwner(player.getUniqueId()).stream()
+                    .map(Realm::getName)
+                    .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))
+                    .collect(Collectors.toList());
+        }
         return Collections.emptyList();
     }
 }

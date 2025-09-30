@@ -17,11 +17,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class RealmPlayersMenu extends Menu {
@@ -51,19 +47,15 @@ public class RealmPlayersMenu extends Menu {
     }
 
     private void loadAndSetItems() {
-        inventory.setItem(22, createGuiItem(Material.CLOCK, "&7Loading players..."));
-        realmManager.getRealmByName(realmName).thenAccept(loadedRealm -> {
-            this.realm = loadedRealm;
-            if (this.realm == null) {
-                Bukkit.getScheduler().runTask(plugin, () -> {
-                    player.closeInventory();
-                    plugin.getLanguageManager().sendMessage(player, "error.realm_not_found");
-                });
-                return;
-            }
-            this.allPlayers = new ArrayList<>(realm.getMembers().keySet());
-            Bukkit.getScheduler().runTask(plugin, this::setMenuItems);
-        });
+        Optional<Realm> optionalRealm = realmManager.getRealmByName(realmName);
+        if (optionalRealm.isEmpty()) {
+            player.closeInventory();
+            plugin.getLanguageManager().sendMessage(player, "error.realm_not_found");
+            return;
+        }
+        this.realm = optionalRealm.get();
+        this.allPlayers = new ArrayList<>(realm.getMembers().keySet());
+        setMenuItems();
     }
 
     private void setMenuItems() {
@@ -159,8 +151,8 @@ public class RealmPlayersMenu extends Menu {
         boolean isTargetOwner = realm.getOwner().equals(targetId);
 
         if (isOwner && !isTargetOwner) {
-            // The removeMemberFromRealm method now handles cache invalidation internally.
-            realmManager.removeMemberFromRealm(realm, targetId).thenRun(() -> {
+            realm.removeMember(targetId); // Modify the object
+            realmManager.updateRealm(realm).thenRun(() -> { // Persist the change
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     plugin.getLanguageManager().sendMessage(player, "realm.player_kicked", "%player%", Bukkit.getOfflinePlayer(targetId).getName());
                     // Refresh the menu to show the updated player list

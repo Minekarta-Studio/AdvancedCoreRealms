@@ -1,13 +1,15 @@
 package com.minekarta.advancedcorerealms.manager;
 
 import com.minekarta.advancedcorerealms.AdvancedCoreRealms;
+import com.minekarta.advancedcorerealms.data.object.Realm;
 import com.minekarta.advancedcorerealms.realm.Role;
-import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.logging.Level;
 
 public class InviteManager {
 
@@ -23,23 +25,24 @@ public class InviteManager {
     }
 
     public void sendInvite(Player sender, Player target, String realmName) {
-        realmManager.getRealmByName(realmName).thenAccept(realm -> {
-            if (realm == null) {
-                languageManager.sendMessage(sender, "error.realm_not_found");
-                return;
-            }
+        Optional<Realm> optionalRealm = realmManager.getRealmByName(realmName);
 
-            if (!realm.getOwner().equals(sender.getUniqueId())) {
-                languageManager.sendMessage(sender, "error.not-owner");
-                return;
-            }
+        if (optionalRealm.isEmpty()) {
+            languageManager.sendMessage(sender, "error.realm_not_found");
+            return;
+        }
 
-            pendingInvites.put(target.getUniqueId(), realmName);
+        Realm realm = optionalRealm.get();
+        if (!realm.getOwner().equals(sender.getUniqueId())) {
+            languageManager.sendMessage(sender, "error.not-owner");
+            return;
+        }
 
-            languageManager.sendMessage(target, "realm.invite_received", "%player%", sender.getName(), "%realm%", realmName);
-            languageManager.sendMessage(target, "realm.invite_instructions");
-            languageManager.sendMessage(sender, "realm.invite_sent", "%player%", target.getName());
-        });
+        pendingInvites.put(target.getUniqueId(), realmName);
+
+        languageManager.sendMessage(target, "realm.invite_received", "%player%", sender.getName(), "%realm%", realmName);
+        languageManager.sendMessage(target, "realm.invite_instructions");
+        languageManager.sendMessage(sender, "realm.invite_sent", "%player%", target.getName());
     }
 
     public void acceptInvite(Player player) {
@@ -51,30 +54,29 @@ public class InviteManager {
             return;
         }
 
-        realmManager.getRealmByName(realmName).thenCompose(realm -> {
-            if (realm == null) {
-                languageManager.sendMessage(player, "error.realm_not_found");
-                return null;
-            }
+        Optional<Realm> optionalRealm = realmManager.getRealmByName(realmName);
+        if (optionalRealm.isEmpty()) {
+            languageManager.sendMessage(player, "error.realm_not_found");
+            return;
+        }
 
-            if (realm.isMember(playerId)) {
-                // Already a member, just teleport
-                plugin.getWorldManager().teleportToRealm(player, realmName);
-                return null;
-            }
+        Realm realm = optionalRealm.get();
+        if (realm.isMember(playerId)) {
+            // Already a member, just teleport
+            plugin.getWorldManager().teleportToRealm(player, realmName);
+            return;
+        }
 
-            // Add the player as a member to the local object for the teleport check
-            realm.addMember(playerId, Role.MEMBER);
-
-            // Save the new member to the database, which will also handle cache invalidation
-            return realmManager.addMemberToRealm(realm, playerId, Role.MEMBER);
-
-        }).thenRun(() -> {
+        // Add the player as a member and save the realm
+        realm.addMember(playerId, Role.MEMBER);
+        realmManager.updateRealm(realm).thenRun(() -> {
             languageManager.sendMessage(player, "realm.invite_accepted", "%realm%", realmName);
             plugin.getWorldManager().teleportToRealm(player, realmName);
         }).exceptionally(ex -> {
-            plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to accept invite for player " + player.getName(), ex);
+            plugin.getLogger().log(Level.SEVERE, "Failed to accept invite for player " + player.getName(), ex);
             languageManager.sendMessage(player, "error.command_generic");
+            // Revert the local change if save failed, though it's not critical as it wasn't persisted
+            realm.removeMember(playerId);
             return null;
         });
     }

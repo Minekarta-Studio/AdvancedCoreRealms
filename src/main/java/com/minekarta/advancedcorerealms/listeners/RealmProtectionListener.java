@@ -4,6 +4,7 @@ import com.minekarta.advancedcorerealms.AdvancedCoreRealms;
 import com.minekarta.advancedcorerealms.data.object.Realm;
 import com.minekarta.advancedcorerealms.manager.RealmManager;
 import com.minekarta.advancedcorerealms.realm.Role;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -22,11 +23,19 @@ public class RealmProtectionListener implements Listener {
         this.realmManager = plugin.getRealmManager();
     }
 
+    private Optional<Realm> getRealmFromWorld(World world) {
+        String worldName = world.getName();
+        if (worldName.startsWith("realms/")) {
+            String worldFolderName = worldName.substring("realms/".length());
+            return realmManager.getRealmByWorldFolderName(worldFolderName);
+        }
+        return Optional.empty();
+    }
+
     @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
     public void onBlockPlace(BlockPlaceEvent event) {
         Player player = event.getPlayer();
-        // Use the fast, synchronous cache lookup for the listener
-        Optional<Realm> realmOptional = realmManager.getRealmFromCacheByWorld(player.getWorld().getName());
+        Optional<Realm> realmOptional = getRealmFromWorld(player.getWorld());
 
         if (realmOptional.isPresent()) {
             Realm realm = realmOptional.get();
@@ -42,7 +51,7 @@ public class RealmProtectionListener implements Listener {
     @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
     public void onBlockBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();
-        Optional<Realm> realmOptional = realmManager.getRealmFromCacheByWorld(player.getWorld().getName());
+        Optional<Realm> realmOptional = getRealmFromWorld(player.getWorld());
 
         if (realmOptional.isPresent()) {
             Realm realm = realmOptional.get();
@@ -59,7 +68,7 @@ public class RealmProtectionListener implements Listener {
         Player player = event.getPlayer();
         if (event.getClickedBlock() == null) return;
 
-        Optional<Realm> realmOptional = realmManager.getRealmFromCacheByWorld(player.getWorld().getName());
+        Optional<Realm> realmOptional = getRealmFromWorld(player.getWorld());
 
         if (realmOptional.isPresent()) {
             Realm realm = realmOptional.get();

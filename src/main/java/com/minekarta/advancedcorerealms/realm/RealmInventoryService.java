@@ -34,7 +34,7 @@ public class RealmInventoryService {
 
     public void enterRealm(Player player, Realm realm) {
         UUID playerUUID = player.getUniqueId();
-        UUID realmUUID = UUID.fromString(realm.getWorldName()); // Assuming world name is the UUID for now
+        UUID realmUUID = realm.getRealmId();
 
         // Prevent simultaneous operations
         if (isOperationOngoing(playerUUID)) return;
@@ -73,7 +73,7 @@ public class RealmInventoryService {
     public void exitRealm(Player player, Realm realm) {
         // Exiting a realm is treated as entering the "global" world
         UUID playerUUID = player.getUniqueId();
-        UUID realmUUID = UUID.fromString(realm.getWorldName());
+        UUID realmUUID = realm.getRealmId();
 
         if (isOperationOngoing(playerUUID)) return;
 

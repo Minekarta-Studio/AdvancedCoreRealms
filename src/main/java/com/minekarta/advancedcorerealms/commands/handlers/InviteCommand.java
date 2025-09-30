@@ -2,6 +2,7 @@ package com.minekarta.advancedcorerealms.commands.handlers;
 
 import com.minekarta.advancedcorerealms.AdvancedCoreRealms;
 import com.minekarta.advancedcorerealms.commands.base.SubCommand;
+import com.minekarta.advancedcorerealms.data.object.Realm;
 import com.minekarta.advancedcorerealms.manager.InviteManager;
 import com.minekarta.advancedcorerealms.manager.LanguageManager;
 import com.minekarta.advancedcorerealms.manager.RealmManager;
@@ -11,6 +12,7 @@ import org.bukkit.entity.Player;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class InviteCommand implements SubCommand {
@@ -47,27 +49,20 @@ public class InviteCommand implements SubCommand {
             return;
         }
 
-        realmManager.getRealmByName(realmName).thenAccept(realm -> {
-            if (realm == null) {
-                languageManager.sendMessage(player, "error.realm_not_found");
-                return;
-            }
+        Optional<Realm> optionalRealm = realmManager.getRealmByName(realmName);
 
-            if (!realm.getOwner().equals(player.getUniqueId())) {
-                languageManager.sendMessage(player, "error.not-owner");
-                return;
-            }
+        if (optionalRealm.isEmpty()) {
+            languageManager.sendMessage(player, "error.realm_not_found");
+            return;
+        }
 
-            // Ensure invite logic is run on the main thread if it interacts with Bukkit API
-            Bukkit.getScheduler().runTask(plugin, () ->
-                inviteManager.sendInvite(player, targetPlayer, realmName)
-            );
+        Realm realm = optionalRealm.get();
+        if (!realm.getOwner().equals(player.getUniqueId())) {
+            languageManager.sendMessage(player, "error.not-owner");
+            return;
+        }
 
-        }).exceptionally(ex -> {
-            plugin.getLogger().severe("Error during invite command: " + ex.getMessage());
-            languageManager.sendMessage(player, "error.command_generic");
-            return null;
-        });
+        inviteManager.sendInvite(player, targetPlayer, realmName);
     }
 
     @Override
@@ -83,12 +78,12 @@ public class InviteCommand implements SubCommand {
     @Override
     public List<String> onTabComplete(Player player, String[] args) {
         if (args.length == 2) {
-            // Tab-completion for realm names cannot be done without blocking or a complex cache.
-            // Returning an empty list is the safest option for server performance.
-            return Collections.emptyList();
+            return realmManager.getRealmsByOwner(player.getUniqueId()).stream()
+                    .map(Realm::getName)
+                    .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))
+                    .collect(Collectors.toList());
         }
         if (args.length == 3) {
-            // Suggest online players, which is a non-blocking operation.
             return Bukkit.getOnlinePlayers().stream()
                     .map(Player::getName)
                     .filter(name -> name.toLowerCase().startsWith(args[2].toLowerCase()))

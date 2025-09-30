@@ -88,7 +88,7 @@ public class BorderColorMenu extends Menu {
         Bukkit.getPluginManager().callEvent(colorEvent);
 
         if (!colorEvent.isCancelled()) {
-            advancedCorePlayer.setBorderColor(color);
+            // advancedCorePlayer.setBorderColor(color); // Temporarily disabled as the underlying PlayerData system was removed.
             plugin.getLanguageManager().sendMessage(player, "border.color_set", "%color%", color.name().toLowerCase());
             player.closeInventory();
         }

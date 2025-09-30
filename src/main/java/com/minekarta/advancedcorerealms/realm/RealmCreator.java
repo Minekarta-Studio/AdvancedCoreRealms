@@ -2,34 +2,47 @@ package com.minekarta.advancedcorerealms.realm;
 
 import com.minekarta.advancedcorerealms.AdvancedCoreRealms;
 import com.minekarta.advancedcorerealms.data.object.Realm;
-import com.minekarta.advancedcorerealms.manager.world.WorldManager;
-import com.minekarta.advancedcorerealms.manager.world.WorldPluginManager;
+import com.minekarta.advancedcorerealms.manager.RealmManager;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.WorldCreator;
-import org.bukkit.WorldType;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Listener;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Level;
 
-public class RealmCreator implements Listener {
+public class RealmCreator {
 
     private final AdvancedCoreRealms plugin;
-    private final WorldManager worldManager;
-    private final WorldPluginManager worldPluginManager;
+    private final RealmManager realmManager;
 
     public RealmCreator(AdvancedCoreRealms plugin) {
         this.plugin = plugin;
-        this.worldManager = plugin.getWorldManager();
-        this.worldPluginManager = worldManager.getWorldPluginManager();
+        this.realmManager = plugin.getRealmManager();
     }
 
+    /**
+     * Asynchronously creates a new realm.
+     * This process involves checking for name availability, copying a world template,
+     * creating the world, saving the realm data, and teleporting the player.
+     *
+     * @param player The player creating the realm.
+     * @param realmName The desired name for the realm.
+     * @param templateType The template to use for the world.
+     */
     public void createRealmAsync(Player player, String realmName, String templateType) {
-        File lockFile = new File(plugin.getDataFolder(), "creating_" + realmName + ".lock");
+        // 1. Check if realm name is already taken
+        if (realmManager.doesRealmExist(realmName)) {
+            plugin.getLanguageManager().sendMessage(player, "error.realm_name_taken");
+            return;
+        }
+
+        // Use a lock file based on player UUID to prevent concurrent creation by the same player
+        File lockFile = new File(plugin.getDataFolder(), "creating_" + player.getUniqueId().toString() + ".lock");
         try {
             if (!lockFile.createNewFile()) {
                 plugin.getLanguageManager().sendMessage(player, "error.creation_in_progress");
@@ -41,43 +54,72 @@ public class RealmCreator implements Listener {
             return;
         }
 
+        plugin.getLanguageManager().sendMessage(player, "realm.creation_started");
+
         CompletableFuture.runAsync(() -> {
             try {
-                WorldCreator creator = new WorldCreator(realmName);
+                // 2. Create the Realm object first to get the unique ID and folder name
+                final Realm realm = new Realm(realmName, player.getUniqueId(), templateType);
+                final String worldFolderName = realm.getWorldFolderName();
+                final String worldPath = "realms/" + worldFolderName;
 
-                File templateDir = new File(plugin.getDataFolder() + "/" + plugin.getRealmConfig().getTemplatesFolder(), templateType);
+                // 3. Prepare directories and copy template
+                File templateDir = new File(plugin.getDataFolder(), "templates/" + templateType);
                 if (!templateDir.exists() || !templateDir.isDirectory()) {
                     plugin.getLanguageManager().sendMessage(player, "error.template_not_found", "%template%", templateType);
                     return;
                 }
 
-                File worldContainer = Bukkit.getWorldContainer();
-                File newWorldDir = new File(worldContainer, realmName);
+                File newWorldDir = new File(Bukkit.getWorldContainer(), worldPath);
+                File realmsDir = newWorldDir.getParentFile();
+                if (!realmsDir.exists()) {
+                    realmsDir.mkdirs();
+                }
 
                 try {
                     copyDirectory(templateDir, newWorldDir);
+                    // IMPORTANT: Delete the uid.dat file to prevent Bukkit from thinking it's the same world
+                    File uidDat = new File(newWorldDir, "uid.dat");
+                    if (uidDat.exists()) {
+                        uidDat.delete();
+                    }
                 } catch (IOException e) {
                     plugin.getLogger().log(Level.SEVERE, "Failed to copy template for new realm.", e);
                     plugin.getLanguageManager().sendMessage(player, "error.command_generic");
                     return;
                 }
 
-                World world = worldPluginManager.createWorldAsync(realmName, creator, player).join();
+                // 4. Create and load the world on the main thread
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    WorldCreator creator = new WorldCreator(worldPath);
+                    World world = creator.createWorld();
 
-                if (world != null) {
-                    Realm realm = new Realm(realmName, player.getUniqueId(), realmName, templateType);
-                    realm.setFlat(world.getWorldType() == WorldType.FLAT);
+                    if (world != null) {
+                        // Update realm object with final details from the created world
+                        realm.setFlat(world.getWorldType() == org.bukkit.WorldType.FLAT);
+                        realm.setBorderCenterX(world.getSpawnLocation().getX());
+                        realm.setBorderCenterZ(world.getSpawnLocation().getZ());
+                        realm.setDifficulty(world.getDifficulty().name().toLowerCase());
 
-                    plugin.getRealmManager().createRealm(realm).thenRun(() -> {
-                        Bukkit.getScheduler().runTask(plugin, () -> {
-                            worldManager.teleportToRealm(player, realmName);
+                        // 5. Save the realm data to JSON and teleport the player
+                        realmManager.createRealm(realm).thenRun(() -> {
                             plugin.getLanguageManager().sendMessage(player, "world.created", "%world%", realmName);
+                            // Teleport must also be on the main thread
+                            Bukkit.getScheduler().runTask(plugin, () -> {
+                                plugin.getWorldManager().teleportToRealm(player, realmName);
+                            });
+                        }).exceptionally(ex -> {
+                            plugin.getLogger().log(Level.SEVERE, "Failed to save new realm data after world creation.", ex);
+                            plugin.getLanguageManager().sendMessage(player, "error.command_generic");
+                            // Consider adding cleanup logic here
+                            return null;
                         });
-                    });
-                } else {
-                    plugin.getLanguageManager().sendMessage(player, "error.world_creation_failed", "%world%", realmName);
-                }
+                    } else {
+                        plugin.getLanguageManager().sendMessage(player, "error.world_creation_failed", "%world%", realmName);
+                    }
+                });
             } finally {
+                // 6. Always release the lock
                 lockFile.delete();
             }
         });
@@ -85,8 +127,8 @@ public class RealmCreator implements Listener {
 
     private void copyDirectory(File source, File destination) throws IOException {
         if (source.isDirectory()) {
-            if (!destination.exists()) {
-                destination.mkdir();
+            if (!destination.exists() && !destination.mkdirs()) {
+                throw new IOException("Cannot create directory " + destination.getAbsolutePath());
             }
             String[] files = source.list();
             if (files != null) {
@@ -97,7 +139,7 @@ public class RealmCreator implements Listener {
                 }
             }
         } else {
-            java.nio.file.Files.copy(source.toPath(), destination.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            Files.copy(source.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING);
         }
     }
 }

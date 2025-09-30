@@ -16,7 +16,6 @@ import org.bukkit.inventory.ItemStack;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 public class RealmsListMenu extends Menu {
@@ -43,16 +42,14 @@ public class RealmsListMenu extends Menu {
     }
 
     private void loadAndSetItems() {
-        inventory.setItem(22, createGuiItem(Material.CLOCK, "&7Loading...")); // Centered loading item
-
-        CompletableFuture<List<Realm>> realmsFuture = ownRealms
-                ? realmManager.getRealmsByOwner(player.getUniqueId())
-                : realmManager.getInvitedRealms(player.getUniqueId());
-
-        realmsFuture.thenAccept(loadedRealms -> {
-            this.allRealms = loadedRealms;
-            Bukkit.getScheduler().runTask(plugin, this::setMenuItems);
-        });
+        if (ownRealms) {
+            this.allRealms = realmManager.getRealmsByOwner(player.getUniqueId());
+        } else {
+            this.allRealms = realmManager.getMemberRealms(player.getUniqueId()).stream()
+                    .filter(realm -> !realm.getOwner().equals(player.getUniqueId()))
+                    .collect(Collectors.toList());
+        }
+        setMenuItems();
     }
 
     private void setMenuItems() {
@@ -88,7 +85,8 @@ public class RealmsListMenu extends Menu {
 
             Material mat = realm.isFlat() ? Material.GRASS_BLOCK : Material.STONE;
             String name = "<green>" + realm.getName() + "</green>";
-            String status = Bukkit.getWorld(realm.getWorldName()) != null ? "<gray>Status: <green>Loaded" : "<gray>Status: <red>Unloaded";
+            String worldPath = "realms/" + realm.getWorldFolderName();
+            String status = Bukkit.getWorld(worldPath) != null ? "<gray>Status: <green>Loaded" : "<gray>Status: <red>Unloaded";
             inventory.setItem(slot, createGuiItem(mat, name, status));
             realmSlots.put(slot, realm.getName());
         }

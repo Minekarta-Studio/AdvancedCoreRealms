@@ -11,16 +11,14 @@ import org.bukkit.entity.Player;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 public class ListCommand implements SubCommand {
 
-    private final AdvancedCoreRealms plugin;
     private final LanguageManager languageManager;
     private final RealmManager realmManager;
 
     public ListCommand(AdvancedCoreRealms plugin) {
-        this.plugin = plugin;
         this.languageManager = plugin.getLanguageManager();
         this.realmManager = plugin.getRealmManager();
     }
@@ -32,40 +30,34 @@ public class ListCommand implements SubCommand {
             return;
         }
 
-        CompletableFuture<List<Realm>> ownRealmsFuture = realmManager.getRealmsByOwner(player.getUniqueId());
-        CompletableFuture<List<Realm>> invitedRealmsFuture = realmManager.getInvitedRealms(player.getUniqueId());
+        List<Realm> ownRealms = realmManager.getRealmsByOwner(player.getUniqueId());
+        List<Realm> invitedRealms = realmManager.getMemberRealms(player.getUniqueId()).stream()
+                .filter(realm -> !realm.getOwner().equals(player.getUniqueId()))
+                .collect(Collectors.toList());
 
-        CompletableFuture.allOf(ownRealmsFuture, invitedRealmsFuture).thenRun(() -> {
-            List<Realm> ownRealms = ownRealmsFuture.join();
-            List<Realm> invitedRealms = invitedRealmsFuture.join();
-
-            // Display owned realms
-            languageManager.sendMessage(player, "realm.list.header_own");
-            if (ownRealms.isEmpty()) {
-                languageManager.sendMessage(player, "realm.list.none_own");
-            } else {
-                for (Realm realm : ownRealms) {
-                    String status = Bukkit.getWorld(realm.getWorldName()) != null ? "<green>Loaded" : "<red>Unloaded";
-                    languageManager.sendMessage(player, "realm.list.entry", "%name%", realm.getName(), "%status%", status);
-                }
+        // Display owned realms
+        languageManager.sendMessage(player, "realm.list.header_own");
+        if (ownRealms.isEmpty()) {
+            languageManager.sendMessage(player, "realm.list.none_own");
+        } else {
+            for (Realm realm : ownRealms) {
+                String worldPath = "realms/" + realm.getWorldFolderName();
+                String status = Bukkit.getWorld(worldPath) != null ? "<green>Loaded" : "<red>Unloaded";
+                languageManager.sendMessage(player, "realm.list.entry", "%name%", realm.getName(), "%status%", status);
             }
+        }
 
-            // Display invited realms
-            languageManager.sendMessage(player, "realm.list.header_invited");
-            if (invitedRealms.isEmpty()) {
-                languageManager.sendMessage(player, "realm.list.none_invited");
-            } else {
-                for (Realm realm : invitedRealms) {
-                    String status = Bukkit.getWorld(realm.getWorldName()) != null ? "<green>Loaded" : "<red>Unloaded";
-                    languageManager.sendMessage(player, "realm.list.entry", "%name%", realm.getName(), "%status%", status);
-                }
+        // Display invited realms
+        languageManager.sendMessage(player, "realm.list.header_invited");
+        if (invitedRealms.isEmpty()) {
+            languageManager.sendMessage(player, "realm.list.none_invited");
+        } else {
+            for (Realm realm : invitedRealms) {
+                String worldPath = "realms/" + realm.getWorldFolderName();
+                String status = Bukkit.getWorld(worldPath) != null ? "<green>Loaded" : "<red>Unloaded";
+                languageManager.sendMessage(player, "realm.list.entry", "%name%", realm.getName(), "%status%", status);
             }
-
-        }).exceptionally(ex -> {
-            languageManager.sendMessage(player, "error.command_generic");
-            plugin.getLogger().severe("Error fetching player realms: " + ex.getMessage());
-            return null;
-        });
+        }
     }
 
     @Override

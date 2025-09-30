@@ -11,14 +11,14 @@ import java.util.Map;
 import java.util.UUID;
 
 public class Realm {
-    private int id; // Database ID
+    private final UUID realmId;
     private String name;
     private UUID owner;
     private Map<UUID, Role> members;
     private List<UUID> accessList;  // Additional access permissions beyond members
     private boolean isFlat;
     private Instant createdAt;
-    private String worldName;
+    private String worldFolderName;
     private String template;
     private int maxPlayers;        // Max players allowed in the world
     private boolean isCreativeMode; // Whether the world is in creative or survival
@@ -37,66 +37,51 @@ public class Realm {
     private String borderTierId;
     private String memberSlotTierId;
 
-    public Realm(String name, UUID owner, String worldName, String template) {
+    /**
+     * This constructor is used by Gson for deserialization.
+     * A public constructor is provided for new realm creation.
+     */
+    private Realm() {
+        // This will be overwritten by GSON, but ensures the final field is initialized.
+        this.realmId = UUID.randomUUID();
+    }
+
+    /**
+     * Creates a new Realm instance with default values.
+     * The realmId and worldFolderName are generated automatically.
+     * @param name The display name of the realm.
+     * @param owner The UUID of the player who owns this realm.
+     * @param template The name of the template world used for creation.
+     */
+    public Realm(String name, UUID owner, String template) {
+        this.realmId = UUID.randomUUID();
         this.name = name;
         this.owner = owner;
-        this.worldName = worldName;
+        this.worldFolderName = realmId.toString(); // The folder name is the unique ID
         this.template = template;
         this.members = new HashMap<>();
-        this.members.put(owner, Role.OWNER); // Owner is always a member with OWNER role
+        this.members.put(owner, Role.OWNER);
         this.accessList = new ArrayList<>();
-        this.isFlat = false; // This can be configured per-template later
+        this.isFlat = false; // Default, can be overridden by template config
         this.createdAt = Instant.now();
-        this.maxPlayers = 8; // Default max players
-        this.isCreativeMode = false; // Default to survival
-        this.isPeacefulMode = false; // Default to normal mob spawning
-        this.worldType = "NORMAL";
+        this.maxPlayers = 8; // Default
+        this.isCreativeMode = false; // Default
+        this.isPeacefulMode = true; // Default
+        this.worldType = "NORMAL"; // Default
         this.transferableItems = new ArrayList<>();
-        this.borderSize = 100; // Default border size
+        this.borderSize = 100; // Default
         this.borderCenterX = 0.0;
         this.borderCenterZ = 0.0;
-
-        // Initialize new fields
-        this.difficulty = "normal"; // Default difficulty
-        this.keepLoaded = false;
-        this.borderTierId = "tier_50"; // Default border tier
-        this.memberSlotTierId = "tier_0"; // Default member slot tier
+        this.difficulty = "normal"; // Default
+        this.keepLoaded = false; // Default
+        this.borderTierId = "default"; // Default tier
+        this.memberSlotTierId = "default"; // Default tier
     }
 
-    // This constructor is for loading from storage
-    public Realm(String name, UUID owner, String worldName, String template, Instant createdAt, boolean isFlat) {
-        this.name = name;
-        this.owner = owner;
-        this.worldName = worldName;
-        this.template = template;
-        this.createdAt = createdAt;
-        this.isFlat = isFlat;
-        this.members = new HashMap<>();
-        this.members.put(owner, Role.OWNER); // Ensure owner is set
-        this.accessList = new ArrayList<>();
-        this.maxPlayers = 8;
-        this.isCreativeMode = false;
-        this.isPeacefulMode = false;
-        this.worldType = "NORMAL";
-        this.transferableItems = new ArrayList<>();
-        this.borderSize = 100;
-        this.borderCenterX = 0.0;
-        this.borderCenterZ = 0.0;
-
-        // Initialize new fields with defaults, will be overwritten by loader
-        this.difficulty = "normal";
-        this.keepLoaded = false;
-        this.borderTierId = "tier_50";
-        this.memberSlotTierId = "tier_0";
-    }
 
     // Getters and setters
-    public int getId() {
-        return id;
-    }
-
-    public void setId(int id) {
-        this.id = id;
+    public UUID getRealmId() {
+        return realmId;
     }
 
     public String getName() {
@@ -152,12 +137,12 @@ public class Realm {
         return createdAt;
     }
 
-    public String getWorldName() {
-        return worldName;
+    public String getWorldFolderName() {
+        return worldFolderName;
     }
 
-    public void setWorldName(String worldName) {
-        this.worldName = worldName;
+    public void setWorldFolderName(String worldFolderName) {
+        this.worldFolderName = worldFolderName;
     }
 
     public String getTemplate() {
@@ -244,7 +229,7 @@ public class Realm {
     }
     
     public World getBukkitWorld() {
-        return org.bukkit.Bukkit.getWorld(this.worldName);
+        return org.bukkit.Bukkit.getWorld(this.worldFolderName);
     }
     
     public List<String> getTransferableItems() {
