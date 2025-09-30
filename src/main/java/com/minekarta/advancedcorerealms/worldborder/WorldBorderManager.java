@@ -1,8 +1,6 @@
 package com.minekarta.advancedcorerealms.worldborder;
 
 import com.minekarta.advancedcorerealms.AdvancedCoreRealms;
-import com.minekarta.advancedcorerealms.config.ConfigManager;
-import com.minekarta.advancedcorerealms.config.WorldBorderTier;
 import com.minekarta.advancedcorerealms.data.object.Realm;
 import com.minekarta.advancedcorerealms.economy.EconomyService;
 import com.minekarta.advancedcorerealms.manager.LanguageManager;
@@ -19,7 +17,7 @@ import java.util.logging.Level;
 public class WorldBorderManager {
 
     private final AdvancedCoreRealms plugin;
-    private final ConfigManager configManager;
+    private final WorldBorderConfig worldBorderConfig;
     private final RealmManager realmManager;
     private final EconomyService economyService;
     private final LanguageManager languageManager;
@@ -27,7 +25,7 @@ public class WorldBorderManager {
 
     public WorldBorderManager(AdvancedCoreRealms plugin) {
         this.plugin = plugin;
-        this.configManager = plugin.getConfigManager();
+        this.worldBorderConfig = plugin.getWorldBorderConfig();
         this.realmManager = plugin.getRealmManager();
         this.economyService = plugin.getEconomyService();
         this.languageManager = plugin.getLanguageManager();
@@ -45,10 +43,10 @@ public class WorldBorderManager {
             return;
         }
 
-        WorldBorderTier tier = configManager.getTier(realm.getBorderTierId());
+        WorldBorderTier tier = worldBorderConfig.getTier(realm.getBorderTierId());
         if (tier == null) {
             plugin.getLogger().warning("Realm " + realm.getName() + " has an invalid border tier ID: '" + realm.getBorderTierId() + "'. Using default tier.");
-            tier = configManager.getDefaultTier();
+            tier = worldBorderConfig.getDefaultTier();
         }
 
         worldBorderService.applyWorldBorder(realm, tier.getSize());
@@ -62,8 +60,8 @@ public class WorldBorderManager {
      * @param targetTierId The ID of the desired new tier.
      */
     public void upgradeBorder(Player player, Realm realm, String targetTierId) {
-        WorldBorderTier currentTier = configManager.getTier(realm.getBorderTierId());
-        WorldBorderTier targetTier = configManager.getTier(targetTierId);
+        WorldBorderTier currentTier = worldBorderConfig.getTier(realm.getBorderTierId());
+        WorldBorderTier targetTier = worldBorderConfig.getTier(targetTierId);
 
         if (targetTier == null) {
             languageManager.sendMessage(player, "error.border.invalid_tier");
@@ -75,39 +73,40 @@ public class WorldBorderManager {
             return;
         }
 
-        double cost = targetTier.getCost();
+        double cost = targetTier.getCostToUpgrade();
         if (!economyService.hasBalance(player, cost)) {
-            languageManager.sendMessage(player, "error.border.insufficient_funds", "%cost%", String.valueOf(cost));
+            languageManager.sendMessage(player, "error.not_enough_money", "%cost%", String.valueOf(cost));
             return;
         }
 
         // Withdraw money and proceed with the upgrade
         if (economyService.withdraw(player, cost)) {
             realm.setBorderTierId(targetTier.getId());
-            realm.setBorderSize(targetTier.getSize());
+            realm.setBorderSize((int) targetTier.getSize());
 
             realmManager.updateRealm(realm).thenRun(() -> {
                 // Apply the new border and notify the player
                 applyBorder(realm);
-                languageManager.sendMessage(player, "success.border.upgraded", "%tier%", targetTier.getId(), "%size%", String.valueOf(targetTier.getSize()));
+                languageManager.sendMessage(player, "upgrade.success", "%upgrade%", "Border");
 
                 // Notify other players in the world
                 World world = realm.getBukkitWorld();
                 if (world != null) {
-                    String title = languageManager.getMessage("broadcast.border.title");
-                    String subtitle = languageManager.getMessage("broadcast.border.subtitle")
-                                                     .replace("%size%", String.valueOf(targetTier.getSize()));
+                    String title = languageManager.getMessage("realm.upgrade_broadcast.title");
+                    String subtitle = languageManager.getMessage("realm.upgrade_broadcast.subtitle")
+                                                     .replace("%upgrade%", "Border")
+                                                     .replace("%tier%", targetTier.getId());
                     world.getPlayers().forEach(p -> p.sendTitle(title, subtitle, 10, 70, 20));
                 }
             }).exceptionally(ex -> {
                 plugin.getLogger().log(Level.SEVERE, "Failed to save realm after border upgrade. Refunding player.", ex);
                 economyService.deposit(player, cost); // Refund on failure
-                languageManager.sendMessage(player, "error.border.upgrade_failed");
+                languageManager.sendMessage(player, "upgrade.failure-refunded");
                 return null;
             });
         } else {
             // This should theoretically not happen if the `has` check passed, but as a safeguard:
-            languageManager.sendMessage(player, "error.border.economy_error");
+            languageManager.sendMessage(player, "economy.withdrawal-failed");
         }
     }
 }

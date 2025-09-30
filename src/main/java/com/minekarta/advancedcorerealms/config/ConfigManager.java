@@ -22,9 +22,6 @@ public class ConfigManager {
     private String guiItemName;
     private List<String> guiItemLore;
 
-    // WorldBorder Tiers
-    private final Map<String, WorldBorderTier> worldBorderTiers = new HashMap<>();
-
     public ConfigManager(AdvancedCoreRealms plugin) {
         this.plugin = plugin;
         this.config = plugin.getConfig();
@@ -39,7 +36,6 @@ public class ConfigManager {
         this.config = plugin.getConfig();
 
         loadGuiSettings();
-        loadWorldBorderTiers();
     }
 
     private void loadGuiSettings() {
@@ -56,25 +52,6 @@ public class ConfigManager {
         }
     }
 
-    private void loadWorldBorderTiers() {
-        worldBorderTiers.clear();
-        ConfigurationSection tiersSection = config.getConfigurationSection("world_border_tiers");
-        if (tiersSection != null) {
-            for (String tierId : tiersSection.getKeys(false)) {
-                ConfigurationSection tierSection = tiersSection.getConfigurationSection(tierId);
-                if (tierSection != null) {
-                    int size = tierSection.getInt("size");
-                    double cost = tierSection.getDouble("cost", 0.0);
-                    worldBorderTiers.put(tierId, new WorldBorderTier(tierId, size, cost));
-                }
-            }
-        }
-        // Ensure a default tier exists
-        if (!worldBorderTiers.containsKey("default")) {
-            worldBorderTiers.put("default", new WorldBorderTier("default", 100, 0));
-        }
-    }
-
     public String getGuiTitle() {
         return guiTitle;
     }
@@ -85,17 +62,5 @@ public class ConfigManager {
 
     public List<String> getGuiItemLore() {
         return guiItemLore;
-    }
-
-    public Map<String, WorldBorderTier> getWorldBorderTiers() {
-        return worldBorderTiers;
-    }
-
-    public WorldBorderTier getTier(String tierId) {
-        return worldBorderTiers.get(tierId);
-    }
-
-    public WorldBorderTier getDefaultTier() {
-        return worldBorderTiers.get("default");
     }
 }

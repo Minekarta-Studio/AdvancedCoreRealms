@@ -23,30 +23,12 @@ separate-inventories: true # Enable/disable separate inventories for realms
 # Limits
 invite-timeout-seconds: 60 # Time in seconds before an invitation expires
 
-# World Border Settings
-world-borders: true # Enable/disable world borders globally
-default-world-border: true # Default setting for new players (true/false)
-default-border-color: "BLUE" # Default border color: BLUE, GREEN, RED
-
 # ----------------------------------------------------------------------------------------------------
 # Upgrades Configuration
 #
 # Define the tiers and prices for realm upgrades.
 # ----------------------------------------------------------------------------------------------------
 upgrades:
-  border_tiers:
-    - id: "tier_50"
-      size: 50
-      price: 0
-    - id: "tier_100"
-      size: 100
-      price: 5000
-    - id: "tier_150"
-      size: 150
-      price: 12000
-    - id: "tier_200"
-      size: 200
-      price: 25000
   difficulty:
     peaceful: 0
     easy: 2000

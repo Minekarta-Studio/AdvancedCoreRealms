@@ -1,28 +1,28 @@
 # Realms List Menu Configuration
 realms_list:
-  my_realms_title: "{#6677ee>99ffcc}My Realms"
-  accessible_realms_title: "{#6677ee>99ffcc}Accessible Realms"
+  my_realms_title: "<gold>My Realms</gold>"
+  accessible_realms_title: "<gold>Accessible Realms</gold>"
   size: 54
   elements:
     back_button:
       slot: 49
       material: "ARROW"
-      name: "{#999999>cccccc}Back to Main Menu{/#}"
+      name: "<red>Back to Main Menu</red>"
       lore: []
 
     previous_page:
       slot: 48
       material: "ARROW"
-      name: "{#FFFF55>FFFFaa}Previous Page{/#}"
+      name: "<yellow>Previous Page</yellow>"
       lore:
-        - "{#999999>cccccc}Go to the previous page{/#}"
+        - "<gray>Go to the previous page</gray>"
 
     next_page:
       slot: 50
       material: "ARROW"
-      name: "{#FFFF55>FFFFaa}Next Page{/#}"
+      name: "<yellow>Next Page</yellow>"
       lore:
-        - "{#999999>cccccc}Go to the next page{/#}"
+        - "<gray>Go to the next page</gray>"
 
     glass_panes:
       material: "GRAY_STAINED_GLASS_PANE"

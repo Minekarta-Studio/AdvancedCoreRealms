@@ -1,7 +1,5 @@
 package com.minekarta.advancedcorerealms.worldborder;
 
-import org.bukkit.configuration.ConfigurationSection;
-
 /**
  * Represents a specific, immutable tier or level of a world border configuration.
  * <p>
@@ -32,22 +30,6 @@ public class WorldBorderTier {
      * @param transitionTime   The duration in seconds for the border to resize smoothly.
      * @param costToUpgrade    The cost to upgrade to this tier.
      */
-    /**
-     * Constructs a new WorldBorderTier from a configuration section.
-     *
-     * @param section The ConfigurationSection to load data from.
-     */
-    public WorldBorderTier(ConfigurationSection section) {
-        this.id = section.getString("id");
-        this.size = section.getDouble("size");
-        this.centerX = section.getDouble("center.x", 0.0);
-        this.centerZ = section.getDouble("center.z", 0.0);
-        this.warningDistance = section.getInt("warning.distance", 10);
-        this.warningTime = section.getInt("warning.time", 15);
-        this.transitionTime = section.getInt("transition_time", 10);
-        this.costToUpgrade = section.getDouble("price");
-    }
-
     public WorldBorderTier(String id, double size, double centerX, double centerZ, int warningDistance, int warningTime, int transitionTime, double costToUpgrade) {
         this.id = id;
         this.size = size;
@@ -60,14 +42,6 @@ public class WorldBorderTier {
     }
 
     // --- Getters ---
-
-    /**
-     * Gets the price to upgrade to this tier. This is an alias for getCostToUpgrade().
-     * @return The price of the upgrade.
-     */
-    public double getPrice() {
-        return costToUpgrade;
-    }
 
     public String getId() {
         return id;

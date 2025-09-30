@@ -2,10 +2,10 @@ package com.minekarta.advancedcorerealms.commands.handlers;
 
 import com.minekarta.advancedcorerealms.AdvancedCoreRealms;
 import com.minekarta.advancedcorerealms.commands.base.SubCommand;
-import com.minekarta.advancedcorerealms.config.ConfigManager;
 import com.minekarta.advancedcorerealms.data.object.Realm;
 import com.minekarta.advancedcorerealms.manager.LanguageManager;
 import com.minekarta.advancedcorerealms.manager.RealmManager;
+import com.minekarta.advancedcorerealms.worldborder.WorldBorderConfig;
 import com.minekarta.advancedcorerealms.worldborder.WorldBorderManager;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -20,13 +20,13 @@ public class BorderCommand implements SubCommand {
     private final LanguageManager lang;
     private final WorldBorderManager worldBorderManager;
     private final RealmManager realmManager;
-    private final ConfigManager configManager;
+    private final WorldBorderConfig worldBorderConfig;
 
     public BorderCommand(AdvancedCoreRealms plugin) {
         this.lang = plugin.getLanguageManager();
         this.worldBorderManager = plugin.getWorldBorderManager();
         this.realmManager = plugin.getRealmManager();
-        this.configManager = plugin.getConfigManager();
+        this.worldBorderConfig = plugin.getWorldBorderConfig();
     }
 
     @Override
@@ -82,8 +82,8 @@ public class BorderCommand implements SubCommand {
         }
         if (args.length == 3) {
             // Suggest available tier IDs from the config
-            return configManager.getWorldBorderTiers().keySet().stream()
-                    .filter(tierId -> !tierId.equalsIgnoreCase("default")) // Don't suggest the default tier
+            return worldBorderConfig.getAllTiers().keySet().stream()
+                    .filter(tierId -> !tierId.equalsIgnoreCase("tier_1")) // Don't suggest the default tier
                     .filter(tierId -> tierId.toLowerCase().startsWith(args[2].toLowerCase()))
                     .collect(Collectors.toList());
         }

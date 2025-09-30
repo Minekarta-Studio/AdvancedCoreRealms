@@ -4,21 +4,20 @@
 # Use color codes (&) or hex colors (#RRGGBB) and gradients ({#RRGGBB>RRGGBB}text{/#})
 
 realm_creation:
-  title: "{#6677ee>99ffcc}Realms | Create Realm{/#}"
+  title: "<gold>Realms | Create Realm</gold>"
   size: 27
   elements:
     info_item:
       slot: 13
       material: "WRITTEN_BOOK"
-      name: "{#6677ee>99ffcc}Create Realm{/#}"
+      name: "<green>How to Create a Realm</green>"
       lore:
-        - "{#6677ee>99ffcc}To create a realm:{/#}"
-        - "{#6677ee>99ffcc}1. Close this menu{/#}"
-        - "{#6677ee>99ffcc}2. Type /realms create <name> [type]{/#}"
-        - "{#6677ee>99ffcc}In chat with the name you want.{/#}"
+        - "<gray>To create a realm:</gray>"
+        - "<white>1. Close this menu</white>"
+        - "<white>2. Type <yellow>/realms create <name> [type]</yellow></white>"
         - ""
-        - "{#6677ee>99ffcc}Valid types: FLAT, NORMAL, AMPLIFIED{/#}"
-        - "{#6677ee>99ffcc}Names can only contain letters, numbers, and underscores.{/#}"
+        - "<gray>Valid types: <white>FLAT, NORMAL, AMPLIFIED</white></gray>"
+        - "<gray>Names can only contain letters, numbers, and underscores.</gray>"
     
     glass_panes:
       material: "BLACK_STAINED_GLASS_PANE"

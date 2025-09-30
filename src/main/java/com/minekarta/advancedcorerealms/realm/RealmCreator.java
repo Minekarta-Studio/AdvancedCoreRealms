@@ -89,7 +89,17 @@ public class RealmCreator {
                     return;
                 }
 
-                // 4. Create and load the world on the main thread
+                // 4. Set default border from config
+                com.minekarta.advancedcorerealms.worldborder.WorldBorderTier defaultTier = plugin.getWorldBorderConfig().getDefaultTier();
+                if (defaultTier != null) {
+                    realm.setBorderTierId(defaultTier.getId());
+                    realm.setBorderSize((int) defaultTier.getSize());
+                }
+
+                // 5. Apply the world border
+                plugin.getWorldBorderService().applyWorldBorder(realm, realm.getBorderSize());
+
+                // 6. Create and load the world on the main thread
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     WorldCreator creator = new WorldCreator(worldPath);
                     World world = creator.createWorld();
@@ -101,7 +111,7 @@ public class RealmCreator {
                         realm.setBorderCenterZ(world.getSpawnLocation().getZ());
                         realm.setDifficulty(world.getDifficulty().name().toLowerCase());
 
-                        // 5. Save the realm data to JSON and teleport the player
+                        // 7. Save the realm data to JSON and teleport the player
                         realmManager.createRealm(realm).thenRun(() -> {
                             plugin.getLanguageManager().sendMessage(player, "world.created", "%world%", realmName);
                             // Teleport must also be on the main thread

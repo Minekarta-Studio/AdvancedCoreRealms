@@ -1,22 +1,23 @@
 package com.minekarta.advancedcorerealms.menu.menus;
 
 import com.minekarta.advancedcorerealms.AdvancedCoreRealms;
-import com.minekarta.advancedcorerealms.config.ConfigManager;
-import com.minekarta.advancedcorerealms.config.WorldBorderTier;
 import com.minekarta.advancedcorerealms.data.object.Realm;
 import com.minekarta.advancedcorerealms.manager.RealmManager;
 import com.minekarta.advancedcorerealms.menu.Menu;
 import com.minekarta.advancedcorerealms.menu.MenuManager;
+import com.minekarta.advancedcorerealms.worldborder.WorldBorderConfig;
 import com.minekarta.advancedcorerealms.worldborder.WorldBorderManager;
+import com.minekarta.advancedcorerealms.worldborder.WorldBorderTier;
 import org.bukkit.Material;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
 public class UpgradeMenu extends Menu {
 
@@ -25,7 +26,7 @@ public class UpgradeMenu extends Menu {
     private final FileConfiguration menuConfig;
     private final WorldBorderManager worldBorderManager;
     private final RealmManager realmManager;
-    private final ConfigManager configManager;
+    private final WorldBorderConfig worldBorderConfig;
     private Realm realm;
     private final Map<Integer, Runnable> slotActions = new HashMap<>();
 
@@ -36,7 +37,7 @@ public class UpgradeMenu extends Menu {
         this.menuConfig = menuConfig;
         this.worldBorderManager = plugin.getWorldBorderManager();
         this.realmManager = plugin.getRealmManager();
-        this.configManager = plugin.getConfigManager();
+        this.worldBorderConfig = plugin.getWorldBorderConfig();
         loadAndSetItems();
     }
 
@@ -48,8 +49,11 @@ public class UpgradeMenu extends Menu {
 
     private void setMenuItems() {
         inventory.clear();
+        slotActions.clear(); // Clear actions when rebuilding menu
         if (realm == null) {
             inventory.setItem(22, createGuiItem(Material.BARRIER, "<red>No Realm Found", "<gray>You must own a realm to purchase upgrades."));
+            addBackButton();
+            fillEmptySlots();
             return;
         }
 
@@ -61,31 +65,37 @@ public class UpgradeMenu extends Menu {
     }
 
     private void addCurrentStatsItem() {
-        // Simplified stats item
-        int slot = 4; // Example slot
+        int slot = 4;
+        WorldBorderTier currentTier = worldBorderConfig.getTier(realm.getBorderTierId());
+        String borderTierName = (currentTier != null) ? currentTier.getId() : "Unknown";
+        double borderSize = (currentTier != null) ? currentTier.getSize() : realm.getBorderSize();
+
         ItemStack item = createGuiItem(Material.BOOK, "<green>Current Realm Stats",
-                "<gray>Border Size: <white>" + realm.getBorderSize() + " blocks",
+                "<gray>Border Tier: <white>" + borderTierName,
+                "<gray>Border Size: <white>" + borderSize + " blocks",
                 "<gray>Difficulty: <white>" + realm.getDifficulty()
         );
         inventory.setItem(slot, item);
     }
 
     private void addBorderUpgradeItem() {
-        int slot = 22; // Example slot
-        WorldBorderTier currentTier = configManager.getTier(realm.getBorderTierId());
-        if (currentTier == null) currentTier = configManager.getDefaultTier();
+        int slot = 22;
+        WorldBorderTier currentTier = worldBorderConfig.getTier(realm.getBorderTierId());
+        if (currentTier == null) {
+            currentTier = worldBorderConfig.getDefaultTier();
+        }
 
-        final int currentSize = currentTier.getSize();
+        final double currentSize = (currentTier != null) ? currentTier.getSize() : 0;
 
-        Optional<WorldBorderTier> nextTierOpt = configManager.getWorldBorderTiers().values().stream()
+        Optional<WorldBorderTier> nextTierOpt = worldBorderConfig.getAllTiers().values().stream()
                 .filter(tier -> tier.getSize() > currentSize)
-                .min(Comparator.comparingInt(WorldBorderTier::getSize));
+                .min(Comparator.comparingDouble(WorldBorderTier::getSize));
 
         if (nextTierOpt.isPresent()) {
             WorldBorderTier nextTier = nextTierOpt.get();
             ItemStack item = createGuiItem(Material.GRASS_BLOCK, "<gold>Upgrade Border",
                     "<gray>Next Tier: <white>" + nextTier.getSize() + " blocks",
-                    "<gray>Cost: <green>" + plugin.getEconomyService().format(nextTier.getCost()),
+                    "<gray>Cost: <green>" + plugin.getEconomyService().format(nextTier.getCostToUpgrade()),
                     "",
                     "<yellow>Click to purchase!");
             inventory.setItem(slot, item);
@@ -116,19 +126,10 @@ public class UpgradeMenu extends Menu {
         }
     }
 
-
     @Override
     public void handleMenu(InventoryClickEvent e) {
         if (!e.getInventory().equals(inventory)) return;
         e.setCancelled(true);
-
-        if (this.realm == null) {
-            // Handle back button click even if no realm is found
-            if (slotActions.containsKey(e.getSlot())) {
-                slotActions.get(e.getSlot()).run();
-            }
-            return;
-        }
 
         if (slotActions.containsKey(e.getSlot())) {
             slotActions.get(e.getSlot()).run();

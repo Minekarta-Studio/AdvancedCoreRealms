@@ -4,6 +4,7 @@ import com.minekarta.advancedcorerealms.api.AdvancedCorePlayer;
 import com.minekarta.advancedcorerealms.api.AdvancedCorePlayerImpl;
 import com.minekarta.advancedcorerealms.config.ConfigManager;
 import com.minekarta.advancedcorerealms.realm.RealmCreator;
+import com.minekarta.advancedcorerealms.worldborder.WorldBorderConfig;
 import com.minekarta.advancedcorerealms.economy.EconomyService;
 import com.minekarta.advancedcorerealms.economy.NoopEconomyService;
 import com.minekarta.advancedcorerealms.economy.VaultEconomyService;
@@ -49,6 +50,7 @@ public class AdvancedCoreRealms extends JavaPlugin {
     private PlayerStateManager playerStateManager;
     private RealmManager realmManager;
     private ConfigManager configManager;
+    private WorldBorderConfig worldBorderConfig;
     private RealmCreator realmCreator;
     private InventoryStorage inventoryStorage;
     private RealmInventoryService realmInventoryService;
@@ -78,6 +80,9 @@ public class AdvancedCoreRealms extends JavaPlugin {
         // Load configuration
         this.configManager = new ConfigManager(this);
         this.configManager.load();
+
+        this.worldBorderConfig = new WorldBorderConfig(this);
+        this.worldBorderConfig.load();
 
         // Initialize managers
         this.languageManager = new LanguageManager(this);
@@ -222,6 +227,10 @@ public class AdvancedCoreRealms extends JavaPlugin {
 
     public ConfigManager getConfigManager() {
         return configManager;
+    }
+
+    public WorldBorderConfig getWorldBorderConfig() {
+        return worldBorderConfig;
     }
 
     public RealmCreator getRealmCreator() {
