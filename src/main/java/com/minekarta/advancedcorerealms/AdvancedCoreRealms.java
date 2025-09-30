@@ -2,18 +2,17 @@ package com.minekarta.advancedcorerealms;
 
 import com.minekarta.advancedcorerealms.api.AdvancedCorePlayer;
 import com.minekarta.advancedcorerealms.api.AdvancedCorePlayerImpl;
-import com.minekarta.advancedcorerealms.config.RealmConfig;
+import com.minekarta.advancedcorerealms.config.ConfigManager;
 import com.minekarta.advancedcorerealms.realm.RealmCreator;
 import com.minekarta.advancedcorerealms.economy.EconomyService;
 import com.minekarta.advancedcorerealms.economy.NoopEconomyService;
 import com.minekarta.advancedcorerealms.economy.VaultEconomyService;
 import com.minekarta.advancedcorerealms.realm.RealmInventoryService;
-import com.minekarta.advancedcorerealms.storage.DatabaseManager;
 import com.minekarta.advancedcorerealms.storage.InventoryStorage;
+import com.minekarta.advancedcorerealms.storage.StorageManager;
 import com.minekarta.advancedcorerealms.storage.YamlInventoryStorage;
 import com.minekarta.advancedcorerealms.transactions.TransactionLogger;
 import com.minekarta.advancedcorerealms.upgrades.UpgradeManager;
-import com.minekarta.advancedcorerealms.worldborder.WorldBorderConfig;
 import com.minekarta.advancedcorerealms.worldborder.WorldBorderManager;
 import com.minekarta.advancedcorerealms.worldborder.WorldBorderService;
 import com.minekarta.advancedcorerealms.commands.RealmsCommand;
@@ -49,15 +48,14 @@ public class AdvancedCoreRealms extends JavaPlugin {
     private UpgradeManager upgradeManager;
     private PlayerStateManager playerStateManager;
     private RealmManager realmManager;
-    private RealmConfig realmConfig;
+    private ConfigManager configManager;
     private RealmCreator realmCreator;
     private InventoryStorage inventoryStorage;
     private RealmInventoryService realmInventoryService;
     private EconomyService economyService;
     private TransactionLogger transactionLogger;
-    private DatabaseManager databaseManager;
+    private StorageManager storageManager;
     private WorldBorderService worldBorderService;
-    private WorldBorderConfig worldBorderConfig;
     private WorldBorderManager worldBorderManager;
 
     /**
@@ -74,26 +72,17 @@ public class AdvancedCoreRealms extends JavaPlugin {
     public void onEnable() {
         instance = this;
 
-        // Initialize Database Manager first. This is a critical step.
-        // The DatabaseManager will handle its own initialization and, if it fails,
-        // it will log the error and disable the plugin to prevent corruption.
-        this.databaseManager = new DatabaseManager(this);
-        this.databaseManager.initialize();
-
-        // If the plugin is disabled by the database manager, stop further initialization.
-        if (!this.isEnabled()) {
-            return;
-        }
+        // Initialize Storage Manager
+        this.storageManager = new StorageManager(this);
 
         // Load configuration
-        saveDefaultConfig();
-        this.realmConfig = new RealmConfig(getConfig());
-        this.worldBorderConfig = new WorldBorderConfig(this);
-        this.worldBorderConfig.load();
+        this.configManager = new ConfigManager(this);
+        this.configManager.load();
 
         // Initialize managers
         this.languageManager = new LanguageManager(this);
         this.realmManager = new RealmManager(this);
+        this.realmManager.init(); // Load all realms from storage
         this.worldManager = new WorldManager(this);
         this.inviteManager = new InviteManager(this);
         this.menuManager = new MenuManager(this);
@@ -121,8 +110,7 @@ public class AdvancedCoreRealms extends JavaPlugin {
 
         this.languageManager.loadLanguage();
 
-        // Load upgrades and initialize economy
-        this.upgradeManager.loadUpgrades();
+        // Initialize economy
         setupEconomy();
 
         // Register commands
@@ -169,7 +157,10 @@ public class AdvancedCoreRealms extends JavaPlugin {
     }
 
     private void createDefaultTemplateDirectory() {
-        File templatesFolder = new File(getDataFolder(), realmConfig.getTemplatesFolder());
+        // This setting is now managed by ConfigManager, but for simplicity, we'll hardcode the path
+        // or retrieve it from a general settings section if it were added to ConfigManager.
+        // For now, let's assume a default path.
+        File templatesFolder = new File(getDataFolder(), "templates");
         File defaultTemplate = new File(templatesFolder, "default");
 
         if (!defaultTemplate.exists()) {
@@ -189,11 +180,7 @@ public class AdvancedCoreRealms extends JavaPlugin {
      */
     @Override
     public void onDisable() {
-        // Close database connection pool
-        if (databaseManager != null) {
-            databaseManager.close();
-        }
-
+        // All data is saved on-the-fly, so no special shutdown tasks are needed.
         getLogger().info("AdvancedCoreRealms has been disabled!");
     }
 
@@ -233,8 +220,8 @@ public class AdvancedCoreRealms extends JavaPlugin {
         return realmManager;
     }
 
-    public RealmConfig getRealmConfig() {
-        return realmConfig;
+    public ConfigManager getConfigManager() {
+        return configManager;
     }
 
     public RealmCreator getRealmCreator() {
@@ -258,20 +245,16 @@ public class AdvancedCoreRealms extends JavaPlugin {
     }
 
     /**
-     * Gets the manager responsible for handling database connections and providers.
+     * Gets the manager responsible for handling data storage.
      *
-     * @return The active {@link DatabaseManager}.
+     * @return The active {@link StorageManager}.
      */
-    public DatabaseManager getDatabaseManager() {
-        return databaseManager;
+    public StorageManager getStorageManager() {
+        return storageManager;
     }
 
     public WorldBorderService getWorldBorderService() {
         return worldBorderService;
-    }
-
-    public WorldBorderConfig getWorldBorderConfig() {
-        return worldBorderConfig;
     }
 
     public WorldBorderManager getWorldBorderManager() {

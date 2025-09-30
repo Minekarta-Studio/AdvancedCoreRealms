@@ -17,6 +17,7 @@ import org.bukkit.inventory.ItemStack;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class RealmSettingsMenu extends Menu {
@@ -27,7 +28,7 @@ public class RealmSettingsMenu extends Menu {
     private final MenuManager menuManager;
     private final String realmName;
     private final boolean fromMyRealms;
-    private Realm realm; // Loaded asynchronously
+    private Realm realm;
     private final Map<Integer, String> slotActions = new HashMap<>();
 
     public RealmSettingsMenu(AdvancedCoreRealms plugin, Player player, FileConfiguration menuConfig, MenuManager menuManager, String realmName, boolean fromMyRealms) {
@@ -42,19 +43,14 @@ public class RealmSettingsMenu extends Menu {
     }
 
     private void loadAndSetItems() {
-        inventory.setItem(13, createGuiItem(Material.CLOCK, "&7Loading settings..."));
-
-        realmManager.getRealmByName(realmName).thenAccept(loadedRealm -> {
-            this.realm = loadedRealm;
-            if (this.realm == null) {
-                Bukkit.getScheduler().runTask(plugin, () -> {
-                    player.closeInventory();
-                    plugin.getLanguageManager().sendMessage(player, "error.realm_not_found");
-                });
-                return;
-            }
-            Bukkit.getScheduler().runTask(plugin, this::setMenuItems);
-        });
+        Optional<Realm> optionalRealm = realmManager.getRealmByName(realmName);
+        if (optionalRealm.isEmpty()) {
+            player.closeInventory();
+            plugin.getLanguageManager().sendMessage(player, "error.realm_not_found");
+            return;
+        }
+        this.realm = optionalRealm.get();
+        setMenuItems();
     }
 
     private void setMenuItems() {
@@ -91,7 +87,7 @@ public class RealmSettingsMenu extends Menu {
 
     @Override
     public void handleMenu(InventoryClickEvent e) {
-        if (realm == null) return; // Menu is still loading
+        if (realm == null) return;
 
         String action = slotActions.get(e.getSlot());
         if (action == null) return;
@@ -110,7 +106,8 @@ public class RealmSettingsMenu extends Menu {
     }
 
     private void handleSetSpawn() {
-        World world = Bukkit.getWorld(realm.getWorldName());
+        String worldPath = "realms/" + realm.getWorldFolderName();
+        World world = Bukkit.getWorld(worldPath);
         if (world != null && world.equals(player.getWorld())) {
             world.setSpawnLocation(player.getLocation());
             plugin.getLanguageManager().sendMessage(player, "realm.spawn_set", "%realm%", realmName);

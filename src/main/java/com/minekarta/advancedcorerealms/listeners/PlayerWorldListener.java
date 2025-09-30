@@ -25,12 +25,21 @@ public class PlayerWorldListener implements Listener {
         this.realmManager = plugin.getRealmManager();
     }
 
+    private Optional<Realm> getRealmFromWorld(World world) {
+        String worldName = world.getName();
+        if (worldName.startsWith("realms/")) {
+            String worldFolderName = worldName.substring("realms/".length());
+            return realmManager.getRealmByWorldFolderName(worldFolderName);
+        }
+        return Optional.empty();
+    }
+
     @EventHandler
     public void onPlayerWorldChange(PlayerChangedWorldEvent event) {
         Player player = event.getPlayer();
         World toWorld = player.getWorld();
 
-        Optional<Realm> toRealmOpt = realmManager.getRealmFromCacheByWorld(toWorld.getName());
+        Optional<Realm> toRealmOpt = getRealmFromWorld(toWorld);
 
         // Handle GameMode changes when entering/leaving a realm
         if (toRealmOpt.isPresent()) {
@@ -42,7 +51,6 @@ public class PlayerWorldListener implements Listener {
             }
         } else {
             // Player is leaving a realm and entering a non-realm world, set to default gamemode.
-            // This prevents keeping creative mode from a creative realm.
             player.setGameMode(plugin.getServer().getDefaultGameMode());
         }
 
@@ -54,7 +62,7 @@ public class PlayerWorldListener implements Listener {
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
-        Optional<Realm> currentRealmOpt = realmManager.getRealmFromCacheByWorld(player.getWorld().getName());
+        Optional<Realm> currentRealmOpt = getRealmFromWorld(player.getWorld());
 
         // Set game mode based on realm settings if they log into a realm
         currentRealmOpt.ifPresent(currentRealm -> {
@@ -72,9 +80,6 @@ public class PlayerWorldListener implements Listener {
 
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
-        // Inventory saving is handled by RealmInventoryService.
-        // We just need to handle things specific to the player's session.
-
         // Remove world border when player quits
         AdvancedCorePlayer advancedCorePlayer = plugin.getAdvancedCorePlayer(event.getPlayer());
         advancedCorePlayer.removeWorldBorder();

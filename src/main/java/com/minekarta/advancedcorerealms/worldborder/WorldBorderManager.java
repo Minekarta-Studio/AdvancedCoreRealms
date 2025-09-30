@@ -1,38 +1,41 @@
 package com.minekarta.advancedcorerealms.worldborder;
 
 import com.minekarta.advancedcorerealms.AdvancedCoreRealms;
+import com.minekarta.advancedcorerealms.config.ConfigManager;
+import com.minekarta.advancedcorerealms.config.WorldBorderTier;
 import com.minekarta.advancedcorerealms.data.object.Realm;
-import org.bukkit.Bukkit;
+import com.minekarta.advancedcorerealms.economy.EconomyService;
+import com.minekarta.advancedcorerealms.manager.LanguageManager;
+import com.minekarta.advancedcorerealms.manager.RealmManager;
 import org.bukkit.World;
-import org.bukkit.WorldBorder;
 import org.bukkit.entity.Player;
 
 import java.util.logging.Level;
 
 /**
  * Manages the logic for applying and upgrading world borders based on a tiered configuration.
- * This class acts as the central hub for all world border operations, separating the
- * business logic from the direct Bukkit API interactions handled by {@link WorldBorderService}.
+ * This class orchestrates the interaction between configuration, economy, and the Bukkit world border API.
  */
 public class WorldBorderManager {
 
     private final AdvancedCoreRealms plugin;
-    private final WorldBorderConfig borderConfig;
+    private final ConfigManager configManager;
+    private final RealmManager realmManager;
+    private final EconomyService economyService;
+    private final LanguageManager languageManager;
+    private final WorldBorderService worldBorderService;
 
-    /**
-     * Constructs the WorldBorderManager.
-     *
-     * @param plugin The main plugin instance, used to access configuration and other services.
-     */
     public WorldBorderManager(AdvancedCoreRealms plugin) {
         this.plugin = plugin;
-        this.borderConfig = plugin.getWorldBorderConfig();
+        this.configManager = plugin.getConfigManager();
+        this.realmManager = plugin.getRealmManager();
+        this.economyService = plugin.getEconomyService();
+        this.languageManager = plugin.getLanguageManager();
+        this.worldBorderService = plugin.getWorldBorderService();
     }
 
     /**
-     * Applies the appropriate world border to a realm based on its currently configured tier.
-     * This method fetches the tier from the realm's data, finds the corresponding tier
-     * configuration, and then instructs the WorldBorderService to apply it.
+     * Applies the world border to a realm based on its currently saved tier.
      *
      * @param realm The realm whose world border needs to be set or updated.
      */
@@ -42,62 +45,69 @@ public class WorldBorderManager {
             return;
         }
 
-        WorldBorderTier tier = borderConfig.getTier(realm.getBorderTierId());
+        WorldBorderTier tier = configManager.getTier(realm.getBorderTierId());
         if (tier == null) {
             plugin.getLogger().warning("Realm " + realm.getName() + " has an invalid border tier ID: '" + realm.getBorderTierId() + "'. Using default tier.");
-            tier = borderConfig.getDefaultTier();
-            if (tier == null) {
-                plugin.getLogger().severe("No default world border tier is configured. Cannot apply border for realm " + realm.getName() + ".");
-                return;
-            }
+            tier = configManager.getDefaultTier();
         }
 
-        // Delegate the actual border application to the service that handles Bukkit API calls
-        plugin.getWorldBorderService().applyWorldBorder(realm, tier);
+        worldBorderService.applyWorldBorder(realm, tier.getSize());
     }
 
     /**
-     * Sets a realm's world border to a new tier, handling the full update process.
-     * <p>
-     * This method orchestrates the entire border change operation:
-     * <ol>
-     *     <li>Validates that the target tier exists.</li>
-     *     <li>Updates the {@link Realm} object with the new tier ID.</li>
-     *     <li>Saves the updated realm data asynchronously to the database.</li>
-     *     <li>Delegates to the {@link WorldBorderService} to apply the physical border change.</li>
-     *     <li>Notifies players in the world that a transition is beginning.</li>
-     * </ol>
+     * Attempts to upgrade a realm's world border to the next available tier.
      *
-     * @param realm        The realm whose border is to be changed.
-     * @param targetTierId The unique identifier of the target {@link WorldBorderTier}.
+     * @param player The player initiating the upgrade.
+     * @param realm The realm to upgrade.
+     * @param targetTierId The ID of the desired new tier.
      */
-    public void setBorderTier(Realm realm, String targetTierId) {
-        WorldBorderTier targetTier = borderConfig.getTier(targetTierId);
+    public void upgradeBorder(Player player, Realm realm, String targetTierId) {
+        WorldBorderTier currentTier = configManager.getTier(realm.getBorderTierId());
+        WorldBorderTier targetTier = configManager.getTier(targetTierId);
+
         if (targetTier == null) {
-            plugin.getLogger().warning("Attempted to set border to a non-existent tier '" + targetTierId + "' for realm " + realm.getName());
+            languageManager.sendMessage(player, "error.border.invalid_tier");
             return;
         }
 
-        // Update the realm's data to persist the new tier choice
-        realm.setBorderTierId(targetTier.getId());
+        if (currentTier != null && targetTier.getSize() <= currentTier.getSize()) {
+            languageManager.sendMessage(player, "error.border.not_an_upgrade");
+            return;
+        }
 
-        // Asynchronously save the updated realm data. The RealmManager is designed
-        // to handle database operations off the main thread.
-        plugin.getRealmManager().updateRealm(realm);
+        double cost = targetTier.getCost();
+        if (!economyService.hasBalance(player, cost)) {
+            languageManager.sendMessage(player, "error.border.insufficient_funds", "%cost%", String.valueOf(cost));
+            return;
+        }
 
-        // Apply the new border
-        applyBorder(realm);
+        // Withdraw money and proceed with the upgrade
+        if (economyService.withdraw(player, cost)) {
+            realm.setBorderTierId(targetTier.getId());
+            realm.setBorderSize(targetTier.getSize());
 
-        // Notify players that the transition is starting
-        World world = realm.getBukkitWorld();
-        if (world != null) {
-            // These messages can be moved to the language file for full localization.
-            String title = "§aWorld Border Changing";
-            String subtitle = "§7New size: " + (int) targetTier.getSize() + " blocks. Transition: " + targetTier.getTransitionTime() + "s.";
+            realmManager.updateRealm(realm).thenRun(() -> {
+                // Apply the new border and notify the player
+                applyBorder(realm);
+                languageManager.sendMessage(player, "success.border.upgraded", "%tier%", targetTier.getId(), "%size%", String.valueOf(targetTier.getSize()));
 
-            for (Player player : world.getPlayers()) {
-                player.sendTitle(title, subtitle, 10, 70, 20); // fadeIn, stay, fadeOut in ticks
-            }
+                // Notify other players in the world
+                World world = realm.getBukkitWorld();
+                if (world != null) {
+                    String title = languageManager.getMessage("broadcast.border.title");
+                    String subtitle = languageManager.getMessage("broadcast.border.subtitle")
+                                                     .replace("%size%", String.valueOf(targetTier.getSize()));
+                    world.getPlayers().forEach(p -> p.sendTitle(title, subtitle, 10, 70, 20));
+                }
+            }).exceptionally(ex -> {
+                plugin.getLogger().log(Level.SEVERE, "Failed to save realm after border upgrade. Refunding player.", ex);
+                economyService.deposit(player, cost); // Refund on failure
+                languageManager.sendMessage(player, "error.border.upgrade_failed");
+                return null;
+            });
+        } else {
+            // This should theoretically not happen if the `has` check passed, but as a safeguard:
+            languageManager.sendMessage(player, "error.border.economy_error");
         }
     }
 }

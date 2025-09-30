@@ -2,32 +2,31 @@ package com.minekarta.advancedcorerealms.commands.handlers;
 
 import com.minekarta.advancedcorerealms.AdvancedCoreRealms;
 import com.minekarta.advancedcorerealms.commands.base.SubCommand;
+import com.minekarta.advancedcorerealms.config.ConfigManager;
 import com.minekarta.advancedcorerealms.data.object.Realm;
 import com.minekarta.advancedcorerealms.manager.LanguageManager;
-import com.minekarta.advancedcorerealms.worldborder.WorldBorderConfig;
+import com.minekarta.advancedcorerealms.manager.RealmManager;
 import com.minekarta.advancedcorerealms.worldborder.WorldBorderManager;
-import com.minekarta.advancedcorerealms.worldborder.WorldBorderTier;
-import org.bukkit.Bukkit;
-import org.bukkit.World;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class BorderCommand implements SubCommand {
 
-    private final AdvancedCoreRealms plugin;
     private final LanguageManager lang;
     private final WorldBorderManager worldBorderManager;
-    private final WorldBorderConfig worldBorderConfig;
+    private final RealmManager realmManager;
+    private final ConfigManager configManager;
 
     public BorderCommand(AdvancedCoreRealms plugin) {
-        this.plugin = plugin;
         this.lang = plugin.getLanguageManager();
         this.worldBorderManager = plugin.getWorldBorderManager();
-        this.worldBorderConfig = plugin.getWorldBorderConfig();
+        this.realmManager = plugin.getRealmManager();
+        this.configManager = plugin.getConfigManager();
     }
 
     @Override
@@ -37,64 +36,54 @@ public class BorderCommand implements SubCommand {
 
     @Override
     public String getPermission() {
-        return "advancedcorerealms.admin.border";
+        return "advancedcorerealms.user.border.upgrade";
     }
 
     @Override
     public void execute(CommandSender sender, String[] args) {
-        if (args.length < 3 || !args[0].equalsIgnoreCase("upgrade")) {
-            lang.sendMessage(sender, "command.border.usage", "%usage%", "/realms border upgrade <world> <tier>");
+        if (!(sender instanceof Player player)) {
+            lang.sendMessage(sender, "error.players_only");
             return;
         }
 
-        String worldName = args[1];
+        if (args.length < 3) {
+            lang.sendMessage(player, "error.usage.border", "%usage%", "/realms border <realm_name> <tier_id>");
+            return;
+        }
+
+        String realmName = args[1];
         String targetTierId = args[2];
 
-        plugin.getRealmManager().getRealmByWorldName(worldName).thenAcceptAsync(realm -> {
-            if (realm == null) {
-                lang.sendMessage(sender, "error.realm-not-found", "%name%", worldName);
-                return;
-            }
+        Optional<Realm> optionalRealm = realmManager.getRealmByName(realmName);
 
-            WorldBorderTier targetTier = worldBorderConfig.getTier(targetTierId);
-            if (targetTier == null) {
-                lang.sendMessage(sender, "command.border.tier-not-found", "%tier%", targetTierId);
-                return;
-            }
+        if (optionalRealm.isEmpty()) {
+            lang.sendMessage(player, "error.realm_not_found", "%name%", realmName);
+            return;
+        }
 
-            if (realm.getBorderTierId().equalsIgnoreCase(targetTierId)) {
-                lang.sendMessage(sender, "command.border.already-on-tier", "%tier%", targetTierId);
-                return;
-            }
+        Realm realm = optionalRealm.get();
+        if (!realm.getOwner().equals(player.getUniqueId())) {
+            lang.sendMessage(player, "error.not_owner");
+            return;
+        }
 
-            // Execute the upgrade by applying the new tier
-            worldBorderManager.setBorderTier(realm, targetTierId);
-
-            // Notify the command sender
-            lang.sendMessage(sender, "command.border.upgrade-success", "%world%", worldName, "%tier%", targetTierId);
-
-        }).exceptionally(ex -> {
-            sender.sendMessage("§cAn unexpected error occurred while fetching the realm.");
-            plugin.getLogger().log(java.util.logging.Level.SEVERE, "Failed to get realm for border command", ex);
-            return null;
-        });
+        // Delegate the entire upgrade logic to the manager
+        worldBorderManager.upgradeBorder(player, realm, targetTierId);
     }
 
     @Override
     public List<String> onTabComplete(Player player, String[] args) {
-        if (args.length == 1) {
-            return List.of("upgrade");
-        }
         if (args.length == 2) {
-            // Suggest world names
-            return Bukkit.getWorlds().stream()
-                    .map(World::getName)
+            // Suggest realms owned by the player
+            return realmManager.getRealmsByOwner(player.getUniqueId()).stream()
+                    .map(Realm::getName)
                     .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))
                     .collect(Collectors.toList());
         }
         if (args.length == 3) {
-            // Suggest available tier IDs
-            return worldBorderConfig.getAllTiers().keySet().stream()
+            // Suggest available tier IDs from the config
+            return configManager.getWorldBorderTiers().keySet().stream()
+                    .filter(tierId -> !tierId.equalsIgnoreCase("default")) // Don't suggest the default tier
                     .filter(tierId -> tierId.toLowerCase().startsWith(args[2].toLowerCase()))
                     .collect(Collectors.toList());
         }

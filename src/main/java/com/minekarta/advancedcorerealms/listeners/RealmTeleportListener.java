@@ -21,6 +21,16 @@ public class RealmTeleportListener implements Listener {
         this.realmManager = plugin.getRealmManager();
     }
 
+    private Optional<Realm> getRealmFromWorld(World world) {
+        if (world == null) return Optional.empty();
+        String worldName = world.getName();
+        if (worldName.startsWith("realms/")) {
+            String worldFolderName = worldName.substring("realms/".length());
+            return realmManager.getRealmByWorldFolderName(worldFolderName);
+        }
+        return Optional.empty();
+    }
+
     @EventHandler
     public void onPlayerTeleport(PlayerTeleportEvent event) {
         World fromWorld = event.getFrom().getWorld();
@@ -30,22 +40,21 @@ public class RealmTeleportListener implements Listener {
             return; // No world change, no inventory swap needed
         }
 
-        // Use the fast, synchronous cache lookup
-        Optional<Realm> fromRealm = realmManager.getRealmFromCacheByWorld(fromWorld.getName());
-        Optional<Realm> toRealm = realmManager.getRealmFromCacheByWorld(toWorld.getName());
+        Optional<Realm> fromRealm = getRealmFromWorld(fromWorld);
+        Optional<Realm> toRealm = getRealmFromWorld(toWorld);
 
         // Case 1: Leaving a realm to a non-realm world
         if (fromRealm.isPresent() && toRealm.isEmpty()) {
             realmInventoryService.exitRealm(event.getPlayer(), fromRealm.get());
         }
 
-        // Case 2: Entering a realm from a non-realm world (less common, but good to handle)
+        // Case 2: Entering a realm from a non-realm world
         if (fromRealm.isEmpty() && toRealm.isPresent()) {
              realmInventoryService.enterRealm(event.getPlayer(), toRealm.get());
         }
 
         // Case 3: Moving between two different realms
-        if (fromRealm.isPresent() && toRealm.isPresent() && !fromRealm.get().getName().equals(toRealm.get().getName())) {
+        if (fromRealm.isPresent() && toRealm.isPresent() && !fromRealm.get().getRealmId().equals(toRealm.get().getRealmId())) {
             // The `enterRealm` logic handles saving the old inventory and loading the new one.
             realmInventoryService.enterRealm(event.getPlayer(), toRealm.get());
         }

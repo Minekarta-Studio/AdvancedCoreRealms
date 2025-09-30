@@ -2,7 +2,6 @@ package com.minekarta.advancedcorerealms.commands.handlers;
 
 import com.minekarta.advancedcorerealms.AdvancedCoreRealms;
 import com.minekarta.advancedcorerealms.commands.base.SubCommand;
-import com.minekarta.advancedcorerealms.data.object.PlayerData;
 import com.minekarta.advancedcorerealms.manager.LanguageManager;
 import com.minekarta.advancedcorerealms.manager.RealmManager;
 import org.bukkit.Location;
@@ -11,6 +10,7 @@ import org.bukkit.entity.Player;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 public class BackCommand implements SubCommand {
 
@@ -29,16 +29,16 @@ public class BackCommand implements SubCommand {
             return;
         }
 
-        PlayerData playerData = realmManager.getPlayerData(player.getUniqueId());
-        Location previousLocation = playerData.getPreviousLocation();
+        Optional<Location> previousLocationOpt = realmManager.getPreviousLocation(player.getUniqueId());
 
-        if (previousLocation == null) {
+        if (previousLocationOpt.isEmpty()) {
             languageManager.sendMessage(player, "error.no_previous_location");
             return;
         }
 
-        player.teleport(previousLocation);
+        player.teleport(previousLocationOpt.get());
         languageManager.sendMessage(player, "realm.teleport_back_success");
+        realmManager.clearPreviousLocation(player.getUniqueId()); // Clear location after use
     }
 
     @Override

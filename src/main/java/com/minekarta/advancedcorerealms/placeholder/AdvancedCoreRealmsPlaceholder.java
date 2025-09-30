@@ -6,6 +6,7 @@ import com.minekarta.advancedcorerealms.manager.RealmManager;
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 
 import java.util.Optional;
@@ -18,6 +19,16 @@ public class AdvancedCoreRealmsPlaceholder extends PlaceholderExpansion {
     public AdvancedCoreRealmsPlaceholder(AdvancedCoreRealms plugin) {
         this.plugin = plugin;
         this.realmManager = plugin.getRealmManager();
+    }
+
+    private Optional<Realm> getRealmFromWorld(World world) {
+        if (world == null) return Optional.empty();
+        String worldName = world.getName();
+        if (worldName.startsWith("realms/")) {
+            String worldFolderName = worldName.substring("realms/".length());
+            return realmManager.getRealmByWorldFolderName(worldFolderName);
+        }
+        return Optional.empty();
     }
 
     @Override
@@ -51,12 +62,12 @@ public class AdvancedCoreRealmsPlaceholder extends PlaceholderExpansion {
             return null;
         }
 
-        // Placeholders requiring a current realm context, using the fast cache
-        Optional<Realm> currentRealmOpt = realmManager.getRealmFromCacheByWorld(player.getWorld().getName());
+        // Placeholders requiring a current realm context
+        Optional<Realm> currentRealmOpt = getRealmFromWorld(player.getWorld());
 
         if (identifier.startsWith("current_realm_")) {
             if (currentRealmOpt.isEmpty()) {
-                return "N/A";
+                return "N/A"; // Or some other default value
             }
             Realm currentRealm = currentRealmOpt.get();
             switch (identifier) {
@@ -76,18 +87,20 @@ public class AdvancedCoreRealmsPlaceholder extends PlaceholderExpansion {
             }
         }
 
-        // --- Disabled Placeholders ---
-        // The following placeholders cannot be supported with the new asynchronous database system
-        // without causing significant performance issues (lag) on the server's main thread.
-        // They require iterating through all realms or all of a player's realms, which is
-        // no longer feasible in a synchronous context like PlaceholderAPI.
-        // We are disabling them to prioritize server performance and stability.
+        // General placeholders not dependent on the current realm
         switch (identifier.toLowerCase()) {
             case "total_realms":
+                return String.valueOf(realmManager.getAllCachedRealms().size());
             case "player_realms_count":
+                return String.valueOf(realmManager.getRealmsByOwner(player.getUniqueId()).size());
             case "player_invited_realms_count":
+                long invitedCount = realmManager.getMemberRealms(player.getUniqueId()).stream()
+                        .filter(realm -> !realm.getOwner().equals(player.getUniqueId()))
+                        .count();
+                return String.valueOf(invitedCount);
             case "player_total_accessible_realms":
-                return "Unsupported"; // Return a clear indicator that this is no longer supported.
+                 long totalCount = realmManager.getMemberRealms(player.getUniqueId()).size();
+                return String.valueOf(totalCount);
         }
 
         return null; // Placeholder is unknown
