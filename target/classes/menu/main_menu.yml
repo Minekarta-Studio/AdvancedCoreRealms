@@ -4,63 +4,63 @@
 # Use color codes (&) or hex colors (#RRGGBB) and gradients ({#RRGGBB>RRGGBB}text{/#})
 
 main_menu:
-  title: "{#6677ee>99ffcc}AdvancedCoreRealms{/#}"
+  title: "<gold>AdvancedCoreRealms</gold>"
   size: 27
   elements:
     info_item:
       slot: 4
       material: "WRITTEN_BOOK"
-      name: "{#6677ee>99ffcc}AdvancedCoreRealms{/#}"
+      name: "<gradient:#55FF55:#AAFFAA>AdvancedCoreRealms</gradient>"
       lore:
-        - "{#6677ee>99ffcc}Welcome to AdvancedCoreRealms!{/#}"
+        - "<gray>Welcome to AdvancedCoreRealms!</gray>"
         - ""
-        - "{#6677ee>99ffcc}Create and manage your personal worlds.{/#}"
-        - "{#6677ee>99ffcc}Invite friends and customize your realms.{/#}"
+        - "<aqua>Create and manage your personal worlds.</aqua>"
+        - "<aqua>Invite friends and customize your realms.</aqua>"
     
     my_realms:
       slot: 10
       material: "GRASS_BLOCK"
-      name: "{#6677ee>99ffcc}My Realms{/#}"
+      name: "<green>My Realms</green>"
       lore:
-        - "{#6677ee>99ffcc}View and manage your Realms{/#}"
+        - "<gray>View and manage your Realms</gray>"
     
     accessible_realms:
       slot: 12
       material: "ENDER_PEARL"
-      name: "{#6677ee>99ffcc}Accessible Realms{/#}"
+      name: "<aqua>Accessible Realms</aqua>"
       lore:
-        - "{#6677ee>99ffcc}Realms you have access to{/#}"
+        - "<gray>Realms you have access to</gray>"
     
     create_realm:
       slot: 14
       material: "DIAMOND"
-      name: "{#6677ee>99ffcc}Create Realm{/#}"
+      name: "<gradient:#55FF55:#AAFFAA>Create Realm</gradient>"
       permission_required: "advancedcorerealms.donor.create,advancedcorerealms.admin.create,advancedcorerealms.unlimited.create"
       lore:
-        - "{#6677ee>99ffcc}Create a new flat Realm{/#}"
+        - "<gray>Create a new flat Realm</gray>"
       no_permission_material: "BARRIER"
-      no_permission_name: "{#ff5555>ff9999}Create Realm (Donors Only){/#}"
+      no_permission_name: "<red>Create Realm (Donors Only)</red>"
       no_permission_lore:
-        - "{#ff5555>ff9999}Create Realm (Donors Only){/#}"
+        - "<red>You do not have permission to create a new realm.</red>"
     
     get_items:
       slot: 16
       material: "CHEST"
-      name: "{#6677ee>99ffcc}Get Items{/#}"
+      name: "<yellow>Get Items</yellow>"
       lore:
-        - "{#6677ee>99ffcc}Get allowed items from your Realms{/#}"
+        - "<gray>Get allowed items from your Realms</gray>"
     
     help:
       slot: 22
       material: "WRITABLE_BOOK"
-      name: "{#6677ee>99ffcc}Help{/#}"
+      name: "<gold>Help</gold>"
       lore:
-        - "{#6677ee>99ffcc}Available commands:{/#}"
-        - "{#6677ee>99ffcc}/realms create <name> [type] - Create a realm{/#}"
-        - "{#6677ee>99ffcc}/realms list - List your realms{/#}"
-        - "{#6677ee>99ffcc}/realms tp <world> - Teleport to realm{/#}"
-        - "{#6677ee>99ffcc}/realms invite <world> <player> - Invite player{/#}"
-        - "{#6677ee>99ffcc}/realms back - Return to previous location{/#}"
+        - "<yellow>Available commands:</yellow>"
+        - "<white>/realms create <name> [type] - Create a realm</white>"
+        - "<white>/realms list - List your realms</white>"
+        - "<white>/realms tp <world> - Teleport to realm</white>"
+        - "<white>/realms invite <world> <player> - Invite player</white>"
+        - "<white>/realms back - Return to previous location</white>"
     
     glass_panes:
       material: "BLACK_STAINED_GLASS_PANE"
